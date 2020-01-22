@@ -43,3 +43,27 @@ async def replace_mentions(input_str, ctx):
 
             new_str = re.sub(m_pattern, repl, input_str)
             return new_str
+
+weapons = [
+                {
+                    "name": "Daga",
+                    "command": "k",
+                    "damage": 20,
+                    "chance": 80,
+                    "icon": "🗡"
+                },
+                {
+                    "name": "Ballesta",
+                    "command": "b",
+                    "damage": 40,
+                    "chance": 60,
+                    "icon": "🏹"
+                },
+                {
+                    "name": "Red",
+                    "command": "r",
+                    "damage": 80,
+                    "chance": 20,
+                    "icon": "🕸"
+                }
+            ]

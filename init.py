@@ -4,7 +4,7 @@ from discord.ext import commands
 
 #Importa las funciones personalizadas y la configuración del bot
 from config import *
-from misc import *
+from defs import *
 
 client = commands.Bot(command_prefix=prefix)
 
