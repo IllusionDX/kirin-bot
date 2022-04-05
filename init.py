@@ -1,8 +1,7 @@
-#Librerías neceesarias
-import discord
-from discord.ext import commands
+#Imports the necessary libraries
+from nextcord.ext import commands
 
-#Importa las funciones personalizadas y la configuración del bot
+#Imports the bot's configuration and custom functions
 from config import *
 from defs import *
 
@@ -10,15 +9,15 @@ client = commands.Bot(command_prefix=prefix)
 
 @client.event
 async def on_ready():
-    print_frame(f"""Se ha iniciado sesion como {client.user}\nTengo la id de {client.user.id}""")
+    print_frame(f"Logged in as {client.user}\nwith the following ID: {client.user.id}")
 
-print("Cargando extensiones, por favor espere...")
+print("Loading extensions, please wait...")
 for ext in ext_lst:
     try:
         client.load_extension(ext)
-        print(f" + ¡La extension {ext} se ha cargado con éxito!")
+        print(f" + ¡The extension {ext} has been successfully loaded!")
     except Exception as e:
-        print(f" - ¡La extension {ext} no pudo ser cargada! - Error: {e}")
-print("¡Carga de extensiones finalizada!\n")
+        print(f" - ¡The extension {ext} couldn't be loaded! - Error: {e}")
+print("¡Finished loading extensions!\n")
 
 client.run(token)
