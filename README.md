@@ -19,6 +19,6 @@ Usage
 You will need the following things to host this bot by yourself:
 
 - At least Python 3.8 and pip to download the requirements
-- Set an enviroment variable called "BOT_TOKEN" and put your bot's token from the developer portal.
+- Set an environment variable called "BOT_TOKEN" and put your bot's token from the developer portal.
 
 Once it gets to the point I consider it presentable enough it will be made fully public and available for everyone, then you would just invite it.
