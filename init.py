@@ -1,23 +1,32 @@
-#Imports the necessary libraries
 from nextcord.ext import commands
 
 #Imports the bot's configuration and custom functions
 from config import *
 from defs import *
 
-client = commands.Bot(command_prefix=prefix)
+Bot = commands.Bot(command_prefix=PREFIX)
 
-@client.event
+@Bot.event
 async def on_ready():
-    print_frame(f"Logged in as {client.user}\nwith the following ID: {client.user.id}")
+    print_frame(f"Logged in as {Bot.user}\nwith the following ID: {Bot.user.id}")
 
-print("Loading extensions, please wait...")
+# Shitty global command error handling
+@Bot.event
+async def on_command_error(ctx, err):
+    if hasattr(ctx.command, 'on_error'):
+        return
+
+    print(f"Command {ctx.command} has raised an exception: {err}")
+
+print("Loading extensions, please wait...\n")
+
 for ext in ext_lst:
     try:
-        client.load_extension(ext)
+        Bot.load_extension(ext)
         print(f" + ¡The extension {ext} has been successfully loaded!")
     except Exception as e:
         print(f" - ¡The extension {ext} couldn't be loaded! - Error: {e}")
-print("¡Finished loading extensions!\n")
 
-client.run(token)
+print("\n¡Finished loading extensions!\n")
+
+Bot.run(TOKEN)

@@ -7,10 +7,10 @@ import asyncio
 import io
 
 #Imports miscelaneos
-import textwrap
+from config import PREFIX
 from defs import replace_mentions, weapons
 from PIL import Image, ImageFont, ImageDraw
-from config import prefix
+import textwrap
 
 class Fun(commands.Cog, name="Diversión"):
     def __init__(self, client):
@@ -100,7 +100,7 @@ class Fun(commands.Cog, name="Diversión"):
             embed.set_author(name="Bola mágica", icon_url="https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/72/twitter/247/pool-8-ball_1f3b1.png")
             embed.add_field(name="Pregunta:", value=f"{q}", inline=False)
             embed.add_field(name="Respuesta:", value=f"{choice['emote']} | `{answer}`", inline=False)
-            embed.set_footer(text=f"Solicitado por {ctx.author.display_name}",icon_url=ctx.author.avatar_url)
+            embed.set_footer(text=f"Solicitado por {ctx.author.display_name}",icon_url=ctx.author.display_avatar)
         
         try:
             await ctx.send(embed=embed)
