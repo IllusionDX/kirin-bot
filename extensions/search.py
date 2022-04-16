@@ -84,9 +84,9 @@ class Search(commands.Cog, name = "Busqueda"):
 
         embed.set_author(name="Derpibooru", url=f"https://www.derpibooru.org/images/{data['id']}",icon_url="https://i.imgur.com/K311uwc.png")
 
-        embed.add_field(name="Favoritos", value=f"<:favorite:703050986750738433> {data['faves']}", inline=True)
-        embed.add_field(name="Upvotes", value=f"<:upvote:703050998104719420> {data['upvotes']}", inline=True)
-        embed.add_field(name="Downvotes", value=f"<:downvote:703051006593728642> {data['downvotes']}", inline=True)
+        embed.add_field(name="Favoritos", value=f"<:favorite:964725356697378828> {data['faves']}", inline=True)
+        embed.add_field(name="Upvotes", value=f"<:upvote:964725345750237194> {data['upvotes']}", inline=True)
+        embed.add_field(name="Downvotes", value=f"<:downvote:964725367191519252> {data['downvotes']}", inline=True)
      
         embed.add_field(name="Artista", value=artist, inline=True)
 
@@ -96,7 +96,7 @@ class Search(commands.Cog, name = "Busqueda"):
 
         embed.add_field(name="Fuente", value=f"{data['source_url']}", inline=False)
 
-        embed.set_footer(text=f"Solicitado por {ctx.author.display_name}\nUsando la API de Derpibooru: https://www.derpibooru.org/pages/api", icon_url=ctx.author.avatar_url)
+        embed.set_footer(text=f"Solicitado por {ctx.author.display_name}\nUsando la API de Derpibooru: https://www.derpibooru.org/pages/api", icon_url=ctx.author.display_avatar)
 
         embed.set_image(url=data['representations']['full'])
 

@@ -1,16 +1,19 @@
-import discord
-from discord.ext import commands
+from nextcord.ext import commands
 
 class Misc(commands.Cog, name="Miscelaneos"):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, Bot):
+        self.Bot = Bot
 
     @commands.command()
+    @commands.bot_has_permissions(manage_messages=True)
     async def say(self, ctx, *, to_say):
         await ctx.trigger_typing()
-        if ctx.me.permissions_in(ctx.channel).manage_messages:
-            await ctx.message.delete()
+        await ctx.message.delete()
         await ctx.send(to_say)
 
-def setup(client):
-    client.add_cog(Misc(client))
+    @say.error
+    async def say_error(self, ctx, error):
+        await ctx.send(f"{error}")
+
+def setup(Bot):
+    Bot.add_cog(Misc(Bot))
