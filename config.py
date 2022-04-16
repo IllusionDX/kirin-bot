@@ -1,7 +1,7 @@
 import os
 
-PREFIX = "n!"
-TOKEN = str(os.getenv("NX_TOKEN"))
+PREFIX = ";"
+TOKEN = str(os.getenv("TOKEN"))
 
 ext_path = "./extensions"
 ext_lst = []
