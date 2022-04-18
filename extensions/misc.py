@@ -1,19 +1,17 @@
 from nextcord.ext import commands
 
 class Misc(commands.Cog, name="Miscelaneos"):
-    def __init__(self, Bot):
-        self.Bot = Bot
+	def __init__(self, Bot):
+		self.Bot = Bot
 
-    @commands.command()
-    @commands.bot_has_permissions(manage_messages=True)
-    async def say(self, ctx, *, to_say):
-        await ctx.trigger_typing()
-        await ctx.message.delete()
-        await ctx.send(to_say)
+	@commands.command()
+	async def say(self, ctx, *, to_say):
+		await ctx.trigger_typing()
 
-    @say.error
-    async def say_error(self, ctx, error):
-        await ctx.send(f"{error}")
+		if ctx.channel.permissions_for(ctx.me).manage_messages:
+			await ctx.message.delete()
+		
+		await ctx.send(to_say)
 
 def setup(Bot):
-    Bot.add_cog(Misc(Bot))
+	Bot.add_cog(Misc(Bot))
