@@ -14,7 +14,7 @@ class GPT(commands.Cog):
 		response = ""
 
 		async with ctx.typing():
-			response = await self.completion.get_response(prompt)
+			response = self.completion.get_response(prompt)
 
 		# Do something with the message ID
 		await ctx.send(f"{response}")
