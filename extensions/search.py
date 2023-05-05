@@ -1,10 +1,10 @@
-import nextcord
+import discord
 import aiohttp
 import random
 import math
 import re
 
-from nextcord.ext import commands
+from discord.ext import commands
 from defs import *
 from config import filters
 
@@ -40,7 +40,7 @@ class Search(commands.Cog, name = "Busqueda"):
 			query = arg
 
 
-		embed = nextcord.Embed(color=nextcord.Color.orange())
+		embed = discord.Embed(color=discord.Color.orange())
 		url = "https://derpibooru.org/api/v1/json/search/images"
 		params = {
 			"filter_id" : filters["safe"],
@@ -49,7 +49,7 @@ class Search(commands.Cog, name = "Busqueda"):
 			"page" : 1
 		}
 
-		await ctx.trigger_typing()
+		await ctx.typing()
 
 		db_json = await get_json_api(url, params)
 		total_images = db_json["total"]
@@ -70,7 +70,7 @@ class Search(commands.Cog, name = "Busqueda"):
 		artist = [i[7:] for i in data['tags'] if i.startswith("artist:")]
 
 		if not artist:
-			artist = "Anonimo"
+			artist = "Anónimo"
 		elif len(artist) > 5:
 			artist = "Demasiados"
 		else:
@@ -102,7 +102,7 @@ class Search(commands.Cog, name = "Busqueda"):
 
 		try:
 			await ctx.send(embed=embed)
-		except nextcord.HTTPException as e:
+		except discord.HTTPException as e:
 			print(e)
 
 		if data['format'] == "webm":
@@ -110,5 +110,5 @@ class Search(commands.Cog, name = "Busqueda"):
 
 		return
 
-def setup(client):
-	client.add_cog(Search(client))
+async def setup(client):
+	await client.add_cog(Search(client))

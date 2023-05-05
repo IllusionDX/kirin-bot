@@ -1,5 +1,5 @@
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 
 #Imports de módulos integrados
 import random
@@ -16,7 +16,12 @@ class Fun(commands.Cog, name="Diversión"):
 	def __init__(self, client):
 		self.client = client
 	
-	@commands.command(name="8ball", aliases=["caracola"])
+	@commands.command(
+	name="8ball",
+	aliases=["caracola"], 
+	description="Haz una pregunta de si o no y recibe una respuesta potencialmente absurda.",
+	usage="8ball [pregunta]"
+	)
 	async def ball(self, ctx, *, q:str = None):
 		if q is None:
 			await ctx.send("¡No has hecho una pregunta!")
@@ -89,7 +94,7 @@ class Fun(commands.Cog, name="Diversión"):
 			choice = random.choice(list(responses.values()))
 			answer = random.choice(choice["answer"])
 
-			embed = nextcord.Embed(color=nextcord.Color.orange())
+			embed = discord.Embed(color=discord.Color.orange())
 			embed.set_author(name="Bola mágica", icon_url="https://emojipedia-us.s3.dualstack.us-west-1.amazonaws.com/thumbs/72/twitter/247/pool-8-ball_1f3b1.png")
 			embed.add_field(name="Pregunta:", value=f"{q}", inline=False)
 			embed.add_field(name="Respuesta:", value=f"{choice['emote']} | `{answer}`", inline=False)
@@ -100,7 +105,10 @@ class Fun(commands.Cog, name="Diversión"):
 		except Exception as ex:
 			await ctx.send(f"Ha ocurrido un error! - Error {ex}")
 
-	@commands.command()
+	@commands.command(
+		description="Crea una tumba con dedicatoria para tus amigos despues de ganar en el coliseo.",
+		usage="rip [usuario] [inscripción]"
+	)
 	async def rip(self, ctx, a:str = None, *, arg:str = None):
 		def rect_text(self, box, text, font):
 			x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
@@ -149,10 +157,14 @@ class Fun(commands.Cog, name="Diversión"):
 			temp.seek(0)
 
 		#Crea y enviá la imagen final usando el buffer temporal
-		await ctx.send(file=nextcord.File(filename="rip.png", fp=temp))
+		await ctx.send(file=discord.File(filename="rip.png", fp=temp))
 
-	@commands.command(aliases=["retar", "coliseo"])
-	async def challenge(self, ctx, member: nextcord.Member = None):
+	@commands.command(
+		aliases=["retar", "coliseo"],
+		description="Desafia a tus amigos a un duelo a muerte con cuchillos.",
+		usage="challenge [usuario]"
+	)
+	async def challenge(self, ctx, member: discord.Member = None):
 		flavorText = {
 			"onHit" : [
 				"{0} arremete contra {1} y le da un golpe certero. ¡Ouch!, eso debe doler.",
@@ -170,7 +182,7 @@ class Fun(commands.Cog, name="Diversión"):
 			]
 		}
 
-		async def gameloop(self, ctx, author:nextcord.Member, member:nextcord.Member):
+		async def gameloop(self, ctx, author:discord.Member, member:discord.Member):
 			class Player():
 				def __init__(self, member):
 					self.member = member
@@ -265,5 +277,5 @@ class Fun(commands.Cog, name="Diversión"):
 				await ctx.send("Desafió rechazado")
 				return
 
-def setup(client):
-	client.add_cog(Fun(client))
+async def setup(client):
+	await client.add_cog(Fun(client))
