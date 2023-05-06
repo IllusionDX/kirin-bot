@@ -58,7 +58,7 @@ class Completion:
                 for message in findall(Completion.regex, message):
                     message_json = loads(Completion.part1 + message + Completion.part2)
                     Completion.last_msg_id = message_json['id']
-                    yield message_json['delta']
+                    yield message_json['text']
 
             except Empty:
                 pass
@@ -72,7 +72,7 @@ class Completion:
         response_list = []
         for message in Completion.create(prompt, proxy):
             response_list.append(message)
-        return ''.join(response_list)
+        return response_list[-1]
 
     @staticmethod
     def reset():
