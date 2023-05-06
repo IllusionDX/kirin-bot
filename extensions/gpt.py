@@ -6,20 +6,23 @@ import concurrent.futures
 import asyncio
 
 class GPT(commands.Cog):
-    completion = chatbot.Completion()
-    queue = Queue()
-    lock = asyncio.Lock()
-
     def __init__(self, bot):
         self.bot = bot
+        self.completion = chatbot.Completion()
+        self.queue = Queue()
+        self.lock = asyncio.Lock()
 
     @commands.group(name="chat", invoke_without_command=True, aliases=["c"])
-    async def chat(self, ctx, *, message:str = None):
+    async def chat(self, ctx, *, message: str = None):
+        if not message:
+            await ctx.send("Por favor escribe algo para poder responder!")
+            return
+
         prompt = message
         response = ""
 
-        # Add the message to the queue
         async with self.lock:
+            # Add the message to the queue
             self.queue.put((ctx.channel.id, ctx.author.id))
 
         async with self.lock:
@@ -30,7 +33,11 @@ class GPT(commands.Cog):
             # Execute the current order
             async with ctx.typing():
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    response = await self.bot.loop.run_in_executor(executor, self.completion.get_response, prompt)
+                    try:
+                        response = await self.bot.loop.run_in_executor(executor, self.completion.get_response, prompt)
+                    except Exception as e:
+                        print(f"An error occurred while generating response: {e}")
+                        response = "Ha ocurrido un error al generar la respuesta."
 
             # Remove the current order from the queue
             self.queue.get()
@@ -65,7 +72,10 @@ class GPT(commands.Cog):
                 await asyncio.sleep(0.1)
 
             # Execute the reset order
-            self.completion.reset()
+            try:
+                self.completion.reset()
+            except Exception as e:
+                print(f"An error occurred while resetting context: {e}")
 
             # Remove the reset order from the queue
             self.queue.get()
