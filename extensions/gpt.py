@@ -36,7 +36,22 @@ class GPT(commands.Cog):
             self.queue.get()
 
         # Send the response
-        await ctx.send(response)
+        if len(response) > 2000:
+            response_list = response.split()
+            response_chunks = []
+            current_chunk = ""
+            for word in response_list:
+                if len(current_chunk + " " + word) <= 2000:
+                    current_chunk += " " + word
+                else:
+                    response_chunks.append(current_chunk)
+                    current_chunk = word
+            response_chunks.append(current_chunk)
+
+            for chunk in response_chunks:
+                await ctx.send(chunk.strip())
+        else:
+            await ctx.send(response.strip())
 
     @chat.command(name="reset")
     async def reset(self, ctx):
