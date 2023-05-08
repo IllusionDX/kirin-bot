@@ -1,7 +1,6 @@
 from json import loads
 from queue import Queue, Empty
 from re import findall
-from threading import Thread
 from typing import Generator, Optional
 from curl_cffi import requests
 from fake_useragent import UserAgent
@@ -14,10 +13,13 @@ class Completion:
 	message_queue = Queue()
 	stream_completed = False
 	last_msg_id = None
-	thread = None
+	session = requests.Session()
 
 	@staticmethod
 	def request(prompt: str, proxy: Optional[str] = None):
+		if Completion.session is None:
+			Completion.session = requests.Session()
+
 		headers = {
 			'authority': 'chatbot.theb.ai',
 			'content-type': 'application/json',
@@ -32,14 +34,15 @@ class Completion:
 			options['parentMessageId'] = Completion.last_msg_id
 
 		try:
-			response = requests.post(
+			response = Completion.session.post(
 				'https://chatbot.theb.ai/api/chat-process',
 				headers=headers,
 				proxies=proxies,
 				content_callback=Completion.handle_stream_response,
 				json={'prompt': prompt, 'options': options},
-				timeout=360
+				timeout=360,
 			)
+
 			response.raise_for_status()
 
 		except Exception as e:
@@ -51,8 +54,7 @@ class Completion:
 	def create(prompt: str, proxy: Optional[str] = None) -> Generator[str, None, None]:
 		Completion.stream_completed = False
 
-		Completion.thread = Thread(target=Completion.request, args=[prompt, proxy])
-		Completion.thread.start()
+		Completion.request(prompt, proxy)
 
 		while not Completion.stream_completed or not Completion.message_queue.empty():
 			try:
@@ -90,7 +92,6 @@ class Completion:
 	def reset():
 		Completion.stream_completed = False
 		Completion.last_msg_id = None
-		if Completion.thread is not None:
-			Completion.thread.join()
-			Completion.thread = None
 		Completion.message_queue.queue.clear()
+		Completion.session.close()
+		Completion.session = requests.Session()
