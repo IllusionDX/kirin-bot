@@ -33,20 +33,16 @@ class Completion:
 		if Completion.last_msg_id:
 			options['parentMessageId'] = Completion.last_msg_id
 
-		try:
-			response = Completion.session.post(
-				'https://chatbot.theb.ai/api/chat-process',
-				headers=headers,
-				proxies=proxies,
-				content_callback=Completion.handle_stream_response,
-				json={'prompt': prompt, 'options': options},
-				timeout=360,
-			)
+		response = Completion.session.post(
+			'https://chatbot.theb.ai/api/chat-process',
+			headers=headers,
+			proxies=proxies,
+			content_callback=Completion.handle_stream_response,
+			json={'prompt': prompt, 'options': options},
+			timeout=400,
+		)
 
-			response.raise_for_status()
-
-		except Exception as e:
-			raise
+		response.raise_for_status()
 
 		Completion.stream_completed = True
 
@@ -63,7 +59,6 @@ class Completion:
 					message_json = loads(Completion.part1 + message + Completion.part2)
 					Completion.last_msg_id = message_json['id']
 					yield message_json['text']
-
 			except Empty:
 				pass
 
@@ -71,21 +66,20 @@ class Completion:
 
 	@staticmethod
 	def handle_stream_response(response):
-		Completion.message_queue.put(response.decode())
+		try:
+			Completion.message_queue.put(response.decode('utf-8'))
+		except UnicodeDecodeError:
+			pass
 
 	@staticmethod
 	def get_response(prompt: str, proxy: Optional[str] = None) -> Optional[str]:
 		response_list = []
-		try:
-			for message in Completion.create(prompt, proxy):
-				response_list.append(message)
+		for message in Completion.create(prompt, proxy):
+			response_list.append(message)
 
-			if response_list:
-				return response_list[-1]
-
-		except Exception as e:
-			raise
-
+		if response_list:
+			return response_list[-1]
+		
 		return None
 
 	@staticmethod
