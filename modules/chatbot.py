@@ -39,11 +39,10 @@ class Completion:
 			proxies=proxies,
 			content_callback=Completion.handle_stream_response,
 			json={'prompt': prompt, 'options': options},
-			timeout=400,
+			timeout=420,
 		)
 
 		response.raise_for_status()
-
 		Completion.stream_completed = True
 
 	@staticmethod
@@ -88,4 +87,4 @@ class Completion:
 		Completion.last_msg_id = None
 		Completion.message_queue.queue.clear()
 		Completion.session.close()
-		Completion.session = requests.Session()
+		Completion.session = None
