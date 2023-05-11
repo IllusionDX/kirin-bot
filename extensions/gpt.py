@@ -23,7 +23,7 @@ class GPT(commands.Cog):
 		prompt = message
 
 		# Add the message to the queue
-		await self.queue.put((ctx.channel.id, ctx.author.id))
+		await self.queue.put((ctx.channel.id, ctx.author.id, prompt))
 
 		async with self.lock:
 			# Wait until it's been at least 2 seconds since the last order completed
@@ -33,6 +33,7 @@ class GPT(commands.Cog):
 			async with ctx.typing():
 				try:
 					loop = asyncio.get_event_loop()
+					channel_id, author_id, prompt = await self.queue.get()
 					response = await loop.run_in_executor(self.executor, self.completion.get_response, prompt)
 				except Exception as e:
 					print(f"Error generando la respuesta: {e}")
@@ -40,9 +41,6 @@ class GPT(commands.Cog):
 
 			# Update the last completion time
 			self.last_completion_time = time.monotonic()
-
-			# Remove the current order from the queue
-			await self.queue.get()
 
 		# Send the response
 		if len(response) > 2000:
@@ -56,7 +54,7 @@ class GPT(commands.Cog):
 	@chat.command(name="reset")
 	async def reset(self, ctx):
 		# Add the reset order to the queue
-		await self.queue.put((ctx.channel.id, ctx.author.id))
+		await self.queue.put((ctx.channel.id, ctx.author.id, None))
 
 		async with self.lock:
 			# Wait until it's been at least 2 seconds since the last order completed
@@ -64,15 +62,14 @@ class GPT(commands.Cog):
 
 			# Execute the reset order
 			try:
-				self.completion.reset()
+				channel_id, author_id, _ = await self.queue.get()
+				if not _:
+					self.completion.reset()
 			except Exception as e:
 				print(f"Error reiniciando el contexto: {e}")
 
 			# Update the last completion time
 			self.last_completion_time = time.monotonic()
-
-			# Remove the reset order from the queue
-			await self.queue.get()
 
 		async with ctx.typing():
 			# Send a message to the user
