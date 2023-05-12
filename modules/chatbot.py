@@ -24,7 +24,7 @@ class Completion:
 			'authority': 'chatbot.theb.ai',
 			'content-type': 'application/json',
 			'origin': 'https://chatbot.theb.ai',
-			'user-agent': UserAgent().edge,
+			'user-agent': UserAgent().opera,
 		}
 
 		proxies = {'http': 'http://' + proxy, 'https': 'http://' + proxy} if proxy else None
