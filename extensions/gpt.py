@@ -4,6 +4,7 @@ from modules import chatbot
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import time
+import traceback
 
 class GPT(commands.Cog):
 	def __init__(self, bot):
@@ -26,8 +27,8 @@ class GPT(commands.Cog):
 		await self.queue.put((ctx.channel.id, ctx.author.id, prompt))
 
 		async with self.lock:
-			# Wait until it's been at least 2 seconds since the last order completed
-			await asyncio.sleep(max(0, 2 - (time.monotonic() - self.last_completion_time)))
+			# Wait until it's been at least 3 seconds since the last order completed
+			await asyncio.sleep(max(0, 3 - (time.monotonic() - self.last_completion_time)))
 
 			# Execute the current order
 			async with ctx.typing():
@@ -36,7 +37,7 @@ class GPT(commands.Cog):
 					channel_id, author_id, prompt = await self.queue.get()
 					response = await loop.run_in_executor(self.executor, self.completion.get_response, prompt)
 				except Exception as e:
-					print(f"Error generando la respuesta: {e}")
+					traceback.print_exc()
 					response = "Ocurrio un error mientras se generaba la respuesta."
 
 			# Update the last completion time
@@ -57,8 +58,8 @@ class GPT(commands.Cog):
 		await self.queue.put((ctx.channel.id, ctx.author.id, None))
 
 		async with self.lock:
-			# Wait until it's been at least 2 seconds since the last order completed
-			await asyncio.sleep(max(0, 2 - (time.monotonic() - self.last_completion_time)))
+			# Wait until it's been at least 3 seconds since the last order completed
+			await asyncio.sleep(max(0, 3 - (time.monotonic() - self.last_completion_time)))
 
 			# Execute the reset order
 			try:
@@ -66,6 +67,7 @@ class GPT(commands.Cog):
 				if not _:
 					self.completion.reset()
 			except Exception as e:
+				traceback.print_exc()
 				print(f"Error reiniciando el contexto: {e}")
 
 			# Update the last completion time
