@@ -3,7 +3,6 @@ from queue import Queue, Empty
 from re import findall
 from typing import Generator, Optional
 from curl_cffi import requests
-from fake_useragent import UserAgent
 
 class Completion:
 	part1 = '{"role":"assistant","id":"chatcmpl'
@@ -23,9 +22,8 @@ class Completion:
 		headers = {
 			'authority': 'chatbot.theb.ai',
 			'content-type': 'application/json',
-			'origin': 'https://chatbot.theb.ai',
-			'user-agent': UserAgent().opera,
-		}
+			'origin': 'https://chatbot.theb.ai'
+			}
 
 		proxies = {'http': 'http://' + proxy, 'https': 'http://' + proxy} if proxy else None
 
@@ -40,6 +38,7 @@ class Completion:
 			content_callback=Completion.handle_stream_response,
 			json={'prompt': prompt, 'options': options},
 			timeout=420,
+			impersonate="chrome110"
 		)
 
 		response.raise_for_status()
