@@ -14,10 +14,13 @@ class Completion:
 	last_msg_id = None
 	session = requests.Session()
 
+	def closeSession():
+		Completion.session.close()
+		Completion.session = None
+
 	@staticmethod
 	def request(prompt: str, proxy: Optional[str] = None):
-		if Completion.session is None:
-			Completion.session = requests.Session()
+		Completion.session = requests.Session()
 
 		headers = {
 			'authority': 'chatbot.theb.ai',
@@ -43,11 +46,11 @@ class Completion:
 
 		response.raise_for_status()
 		Completion.stream_completed = True
+		Completion.closeSession()
 
 	@staticmethod
 	def create(prompt: str, proxy: Optional[str] = None) -> Generator[str, None, None]:
 		Completion.stream_completed = False
-
 		Completion.request(prompt, proxy)
 
 		while not Completion.stream_completed or not Completion.message_queue.empty():
@@ -85,5 +88,3 @@ class Completion:
 		Completion.stream_completed = False
 		Completion.last_msg_id = None
 		Completion.message_queue.queue.clear()
-		Completion.session.close()
-		Completion.session = None
