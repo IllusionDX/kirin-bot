@@ -1,88 +1,56 @@
 import discord
 from discord.ext import commands
-from modules import chatbot
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
-import time
-import traceback
+from modules import chatbot
 
 class GPT(commands.Cog):
-	def __init__(self, bot):
-		self.bot = bot
-		self.completion = chatbot.Completion()
-		self.queue = asyncio.Queue()
-		self.lock = asyncio.Lock()
-		self.executor = ThreadPoolExecutor()
-		self.last_completion_time = time.monotonic()
-		self.delay = 5
+    def __init__(self, bot):
+        self.bot = bot
+        self.message_id = ""
+        self.system_message = "You'll be playing the role of Autumn Blaze, the cheerful and talkative female kirin from My Little Pony: Friendship is Magic. As Autumn Blaze, you'll talk to the user in their language and assist them with any request."
+        self.command_queue = asyncio.Queue()
 
-	@commands.group(name="chat", invoke_without_command=True, aliases=["c"])
-	async def chat(self, ctx, *, message: str = None):
-		if not message:
-			await ctx.send("Por favor escribe algo para poder responder!")
-			return
+    @commands.group(name="chat", invoke_without_command=True, aliases=["c"])
+    async def chat(self, ctx, *, message: str = None):
+        if not message:
+            await ctx.send("Por favor escribe algo para poder responder!")
+            return
 
-		prompt = message
+        prompt = message
+        await self.command_queue.put((ctx, prompt))  # Enqueue the command
 
-		async with self.lock:
-			# Wait until it's been at least 3 seconds since the last order completed
-			time_since_last_completion = time.monotonic() - self.last_completion_time
-			if time_since_last_completion < self.delay:
-				await asyncio.sleep(self.delay - time_since_last_completion)
+    @chat.command(name="reset")
+    async def reset(self, ctx):
+        self.message_id = ""
 
-			# Add the message to the queue
-			await self.queue.put((ctx.channel.id, ctx.author.id, prompt))
+        # Send a message to the user
+        await ctx.send("El contexto ha sido reiniciado.")
 
-			# Execute the current order
-			async with ctx.typing():
-				try:
-					channel_id, author_id, prompt = await self.queue.get()
-					response = await self.bot.loop.run_in_executor(self.executor, self.completion.get_response, prompt)
-				except Exception as e:
-					traceback.print_exc()
-					response = "Ocurrió un error mientras se generaba la respuesta."
+    async def process_command_queue(self):
+        while True:
+            ctx, prompt = await self.command_queue.get()  # Dequeue the command
 
-			# Update the last completion time
-			self.last_completion_time = time.monotonic()
+            async with ctx.typing():
+                resp = await chatbot.Completion.create(prompt=prompt, parentMessageId=self.message_id, systemMessage=self.system_message)
 
-		# Send the response
-		if len(response) > 2000:
-			# Split long responses into chunks and send each chunk separately
-			response_chunks = [response[i:i+2000].strip() for i in range(0, len(response), 2000)]
-			for i, chunk in enumerate(response_chunks):
-				if i == 0:
-					await ctx.reply(chunk.strip())
-				else:
-					await ctx.send(chunk.strip())
-		else:
-			await ctx.reply(response.strip())
+            answer = resp["text"]
+            self.message_id = resp["id"]
 
-	@chat.command(name="reset")
-	async def reset(self, ctx):
-		async with self.lock:
-			# Wait until it's been at least 3 seconds since the last order completed
-			time_since_last_completion = time.monotonic() - self.last_completion_time
-			if time_since_last_completion < 3:
-				await asyncio.sleep(3 - time_since_last_completion)
+            # Split the response if it exceeds 2000 characters
+            chunks = [answer[i:i+2000] for i in range(0, len(answer), 2000)]
 
-			# Add the reset order to the queue
-			await self.queue.put((ctx.channel.id, ctx.author.id, None))
+            # Send the chunks as messages
+            for i, chunk in enumerate(chunks):
+                if i == 0:
+                    await ctx.reply(chunk)  # Send the first chunk as a reply
+                else:
+                    await ctx.send(chunk)  # Send the remaining chunks as regular messages
 
-			# Execute the reset order
-			async with ctx.typing():
-				try:
-					channel_id, author_id, _ = await self.queue.get()
-					if not _:
-						self.completion.reset()
-				except Exception as e:
-					traceback.print_exc()
-					print(f"Error reiniciando el contexto: {e}")
+            await asyncio.sleep(3)  # Delay of 3 seconds between commands
 
-			# Update the last completion time
-			self.last_completion_time = time.monotonic()
-
-		# Send a message to the user
-		await ctx.send("El contexto ha sido reiniciado.")
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.bot.loop.create_task(self.process_command_queue())
 
 async def setup(bot):
-	await bot.add_cog(GPT(bot))
+    await bot.add_cog(GPT(bot))
