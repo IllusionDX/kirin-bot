@@ -24,7 +24,8 @@ class GPT(commands.Cog):
         self.message_id = ""
 
         # Send a message to the user
-        await ctx.send("El contexto ha sido reiniciado.")
+        async with ctx.typing(): 
+            await ctx.send("La conversación ha sido reiniciada.")
 
     async def process_command_queue(self):
         while True:
@@ -41,7 +42,7 @@ class GPT(commands.Cog):
 
             # Send the chunks as messages
             for i, chunk in enumerate(chunks):
-                if i == 0:
+                if i == 0 and ctx.message.reference is not None:
                     await ctx.reply(chunk)  # Send the first chunk as a reply
                 else:
                     await ctx.send(chunk)  # Send the remaining chunks as regular messages
