@@ -29,6 +29,7 @@ class Completion:
 
     @classmethod
     def _load_json(cls, content) -> dict:
-        split = content.rsplit("\n", 1)[1]
-        to_json = json.loads(split)
-        return to_json
+        lines = content.strip().split('\n')
+        last_line = lines[-1]
+        json_object = json.loads(last_line)
+        return json_object
