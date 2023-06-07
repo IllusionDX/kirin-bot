@@ -22,26 +22,15 @@ class Completion:
         headers = {"Content-type": "application/json"}
 
         async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(url, json=json_data, headers=headers) as response:
-                    content = await response.text()
+            async with session.post(url, json=json_data, headers=headers) as response:
+                if response.status != 200:
+                    raise Exception(f"HTTP error: {response.status} - {response.reason}")
 
-                    if response.status != 200:
-                        raise Exception(f"Request failed with status code {response.status}")
+                content = await response.text()
 
-                    return Completion._load_json(content)
-            except aiohttp.ClientError as e:
-                print(f"HTTP request error: {e}")
-            except Exception as e:
-                print(f"Error: {e}")
-    
-    @classmethod
-    def _load_json(cls, content) -> dict:
         try:
-            lines = content.strip().split('\n')
-            last_line = lines[-1]
-            json_object = json.loads(last_line)
-            return json_object
+            split = content.rsplit("\n", 1)[1]
+            to_json = json.loads(split)
+            return to_json
         except Exception as e:
-            print(f"Error: {e}")
-            print(f"JSON object: {json_object}")
+            raise Exception(f"Error parsing JSON response: {e}\nResponse: {content}") from e
