@@ -18,15 +18,30 @@ class Completion:
             "top_p": top_p,
         }
 
-        url = "http://aiassist.art/api/chat-process"
-        headers = {"Content-type": "application/json"}
+        url = "http://43.153.7.56:8081/api/chat-process"
+        headers = {
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Encoding": "gzip, deflate",
+            "Accept-Language": "en-US",
+            "Connection": "keep-alive",
+            "Content-Length": str(len(json.dumps(json_data))),
+            "Content-Type": "application/json",
+            "Host": "43.153.7.56:8081",
+            "Origin": "http://aiassist.art",
+            "Referer": "http://aiassist.art/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 OPR/99.0.0.0",
+        }
 
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=json_data, headers=headers) as response:
-                if response.status != 200:
-                    raise Exception(f"HTTP error: {response.status} - {response.reason}")
+                try:
+                    if response.status != 200:
+                        raise Exception(f"HTTP error: {response.status} - {response.reason}")
 
-                content = await response.text()
+                    content = await response.text(encoding='utf-8')
+                finally:
+                    response.release()
+            await session.close()
 
         try:
             split = content.rsplit("\n", 1)[1]
