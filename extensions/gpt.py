@@ -64,7 +64,7 @@ class GPT(commands.Cog):
 					else:
 						await ctx.send(chunk)  # Send all chunks as regular messages if the original message is deleted
 
-				await asyncio.sleep(3)  # Delay of 3 seconds between commands
+				await asyncio.sleep(5)  # Delay of 3 seconds between commands
 
 			except Exception as e:
 				await ctx.send(f"Ha ocurrido un error: {e}")
