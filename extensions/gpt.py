@@ -7,6 +7,7 @@ class GPT(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.message_id = ""
+		self.server_id = ""
 		self.system_message = "You'll be playing the role of Autumn Blaze, the cheerful and talkative female kirin from My Little Pony: Friendship is Magic. As Autumn Blaze, you'll talk to the user in their language and assist them with any request."
 		self.command_queue = asyncio.Queue()
 
@@ -22,6 +23,7 @@ class GPT(commands.Cog):
 	@chat.command(name="reset")
 	async def reset(self, ctx):
 		self.message_id = ""
+		self.server_id = ""
 
 		# Send a message to the user
 		async with ctx.typing(): 
@@ -33,10 +35,11 @@ class GPT(commands.Cog):
 
 			try:
 				async with ctx.typing():
-					resp = await chatbot.Completion.create(prompt=prompt, parentMessageId=self.message_id, systemMessage=self.system_message)
+					resp = await chatbot.Completion.create(prompt=prompt, parentMessageId=self.message_id, systemMessage=self.system_message, server_id=self.server_id)
 
-				answer = resp["text"]
-				self.message_id = resp["id"]
+				answer = resp["json"].get("text")
+				self.message_id = resp["json"].get("id")
+				self.server_id = resp["cookie"]
 
 				# Split the response if it exceeds 2000 characters
 				chunks = []
