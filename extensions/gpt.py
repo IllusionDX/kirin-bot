@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import asyncio
+import traceback
 from modules import chatbot
 
 class GPT(commands.Cog):
@@ -70,8 +71,12 @@ class GPT(commands.Cog):
 				await asyncio.sleep(5)  # Delay of 3 seconds between commands
 
 			except Exception as e:
+				traceback.print_exc()
 				await ctx.send(f"Ha ocurrido un error: {e}")
 				# Handle the exception as per your requirement
+			
+			finally:
+				self.command_queue.task_done() # Mark the task as done
 
 	@commands.Cog.listener()
 	async def on_ready(self):
