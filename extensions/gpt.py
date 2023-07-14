@@ -38,6 +38,8 @@ class GPT(commands.Cog):
 				async with ctx.typing():
 					resp = await chatbot.Completion.create(prompt=prompt, parentMessageId=self.message_id, systemMessage=self.system_message, server_id=self.server_id)
 
+				print(f"Debug print: {resp}")
+
 				answer = resp["json"].get("text")
 				self.message_id = resp["json"].get("id")
 				self.server_id = resp["cookie"]
@@ -72,7 +74,6 @@ class GPT(commands.Cog):
 
 			except Exception as e:
 				traceback.print_exc()
-				print(resp)
 				await ctx.send(f"Ha ocurrido un error: {e}")
 				# Handle the exception as per your requirement
 			
