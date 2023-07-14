@@ -72,6 +72,7 @@ class GPT(commands.Cog):
 
 			except Exception as e:
 				traceback.print_exc()
+				print(resp)
 				await ctx.send(f"Ha ocurrido un error: {e}")
 				# Handle the exception as per your requirement
 			
