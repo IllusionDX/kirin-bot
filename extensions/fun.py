@@ -65,7 +65,9 @@ class Fun(commands.Cog, name="Diversión"):
 	async def rip(self, interaction: discord.Interaction, usuario: str = None, *, inscripcion: str = None):
 		def rect_text(box, text, font):
 			x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
-			w, h = font.getsize(text)
+			w = font.getlength(text)
+			bbox = font.getbbox(text)
+			h = bbox[3] - bbox[1]
 			x = (x2 - x1 - w)/2 + x1
 			y = (y2 - y1 - h)/2 + y1
 			return (x, y)
