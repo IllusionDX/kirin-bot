@@ -9,12 +9,19 @@ from defs import *
 intents = discord.Intents.default()
 intents.message_content = True
 
-Bot = commands.Bot(command_prefix=PREFIX, intents=intents)
+Bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 
 @Bot.event
 async def on_ready():
 	print("\n")
 	print_frame(f"Logged in as {Bot.user}\nwith the following ID: {Bot.user.id}")
+	
+	# Sync slash commands
+	try:
+		synced = await Bot.tree.sync()
+		print(f"Synced {len(synced)} slash commands")
+	except Exception as e:
+		print(f"Error syncing slash commands: {e}")
 
 # Global command error handler
 @Bot.event

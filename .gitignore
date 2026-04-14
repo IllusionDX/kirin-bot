@@ -1,0 +1,6 @@
+.env
+__pycache__/
+venv/
+*.txt
+.env
+.DS_Store

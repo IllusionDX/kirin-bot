@@ -1,73 +1,61 @@
 import discord
+from discord import app_commands
+from discord.ext import commands
 import aiohttp
 import random
-import math
 import re
-
-from discord.ext import commands
-from defs import *
+from defs import get_json_api
 from config import filters
 
-class Search(commands.Cog, name = "Busqueda"):
+class Search(commands.Cog, name="Busqueda"):
 	def __init__(self, client):
 		self.client = client
 
-	@commands.command(aliases=["derpi", "derpy", "db"])
-	async def derpibooru(self, ctx, *, arg:str = None):
+	@app_commands.command(name="derpibooru", description="Busca imágenes en Derpibooru")
+	async def derpibooru(self, interaction: discord.Interaction, busqueda: str = None):
+		await interaction.response.defer()
 
-		def get_db_id(q):
-			prog = re.compile("(?<=[images/])([0-9]+)")
-			m = re.search(prog, q)
-			if m is not None:
-				return m[0]
-			else:
-				pass
-
-		m = get_db_id(arg)
-		if m:
-			arg = m
-			if ctx.me.permissions_in(ctx.channel).manage_messages:
-				await ctx.message.delete()
-			else:
-				await ctx.send("¡No tengo permisos para reemplazar tu mensaje!")
-				return
-
-		if arg is None:
+		if busqueda is None:
 			query = "*"
-		elif len(arg.split(",")) == 1 and arg.isdigit():
-			query = "id:" + arg
+		elif busqueda.isdigit():
+			query = f"id:{busqueda}"
 		else:
-			query = arg
-
+			query = busqueda
 
 		embed = discord.Embed(color=discord.Color.orange())
 		url = "https://derpibooru.org/api/v1/json/search/images"
 		params = {
-			"filter_id" : filters["safe"],
-			"q" : query,
-			"per_page" : 1,
-			"page" : 1
+			"filter_id": filters["safe"],
+			"q": query,
+			"per_page": 1,
+			"page": 1
 		}
 
-		await ctx.typing()
-
 		db_json = await get_json_api(url, params)
-		total_images = db_json["total"]
+		if not db_json or "images" not in db_json:
+			await interaction.followup.send("No se han encontrado imágenes")
+			return
 
-		rand_img = random.randint(0, total_images)
-		params["page"] = rand_img
+		total_images = db_json.get("total", 0)
 
 		if total_images < 1:
-			await ctx.send("No se han encontrado imágenes")
-		elif total_images == 1:
-			pass
-		else:
-			embed.add_field(name="Busqueda", value=f"Se han encontrado **{total_images}** imágenes. [{rand_img}/{total_images}]", inline=False)
+			await interaction.followup.send("No se han encontrado imágenes")
+			return
+
+		rand_page = random.randint(1, max(1, total_images))
+		params["page"] = rand_page
+
+		if total_images > 1:
+			embed.add_field(name="Búsqueda", value=f"Se han encontrado **{total_images}** imágenes. [{rand_page}/{total_images}]", inline=False)
 
 		db_json = await get_json_api(url, params)
-		data = db_json['images'][0]
+		if not db_json.get("images"):
+			await interaction.followup.send("No se han encontrado imágenes")
+			return
 
-		artist = [i[7:] for i in data['tags'] if i.startswith("artist:")]
+		data = db_json["images"][0]
+
+		artist = [tag[7:] for tag in data.get("tags", []) if tag.startswith("artist:")]
 
 		if not artist:
 			artist = "Anónimo"
@@ -76,39 +64,24 @@ class Search(commands.Cog, name = "Busqueda"):
 		else:
 			artist = ", ".join(artist)
 
-		if not data['uploader']:
-			data['uploader'] = "Anónimo"
+		uploader = data.get("uploader", "Anónimo")
+		source_url = data.get("source_url", "Ninguna")
 
-		if not data['source_url']:
-			data['source_url'] = "Ninguna"
-
-		embed.set_author(name="Derpibooru", url=f"https://www.derpibooru.org/images/{data['id']}",icon_url="https://i.imgur.com/K311uwc.png")
-
-		embed.add_field(name="Favoritos", value=f"<:favorite:964725356697378828> {data['faves']}", inline=True)
-		embed.add_field(name="Upvotes", value=f"<:upvote:964725345750237194> {data['upvotes']}", inline=True)
-		embed.add_field(name="Downvotes", value=f"<:downvote:964725367191519252> {data['downvotes']}", inline=True)
-
+		embed.set_author(name="Derpibooru", url=f"https://www.derpibooru.org/images/{data['id']}", icon_url="https://i.imgur.com/K311uwc.png")
+		embed.add_field(name="Favoritos", value=f"⭐ {data.get('faves', 0)}", inline=True)
+		embed.add_field(name="Upvotes", value=f"👍 {data.get('upvotes', 0)}", inline=True)
+		embed.add_field(name="Downvotes", value=f"👎 {data.get('downvotes', 0)}", inline=True)
 		embed.add_field(name="Artista", value=artist, inline=True)
+		embed.add_field(name="Puntaje", value=str(data.get("score", 0)), inline=True)
+		embed.add_field(name="Subido por", value=uploader, inline=True)
+		embed.add_field(name="Fuente", value=source_url, inline=False)
+		embed.set_footer(text=f"Solicitado por {interaction.user.display_name}", icon_url=interaction.user.display_avatar)
+		embed.set_image(url=data["representations"]["full"])
 
-		embed.add_field(name="Puntaje", value=f"{data['score']}", inline=True)
+		await interaction.followup.send(embed=embed)
 
-		embed.add_field(name="Subido por", value=f"{data['uploader']}", inline=True)
-
-		embed.add_field(name="Fuente", value=f"{data['source_url']}", inline=False)
-
-		embed.set_footer(text=f"Solicitado por {ctx.author.display_name}\nUsando la API de Derpibooru: https://www.derpibooru.org/pages/api", icon_url=ctx.author.display_avatar)
-
-		embed.set_image(url=data['representations']['full'])
-
-		try:
-			await ctx.send(embed=embed)
-		except discord.HTTPException as e:
-			print(e)
-
-		if data['format'] == "webm":
-			await ctx.send(data['view_url'])
-
-		return
+		if data.get("format") == "webm":
+			await interaction.followup.send(data.get("view_url", ""))
 
 async def setup(client):
 	await client.add_cog(Search(client))
