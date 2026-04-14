@@ -558,14 +558,8 @@ class Fun(commands.Cog, name="🎮 Diversión"):
 
     @app_commands.command(name="rip", description="Crea una tumba con dedicatoria.")
     async def rip(self, interaction: discord.Interaction, usuario: str = None, *, inscripcion: str = None):
-        def rect_text(box, text, font):
-            x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
-            w = font.getlength(text)
-            bbox = font.getbbox(text)
-            h = bbox[3] - bbox[1]
-            x = (x2 - x1 - w)/2 + x1
-            y = (y2 - y1 - h)/2 + y1
-            return (x, y)
+        def get_center(box):
+            return ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
 
         await interaction.response.defer()
 
@@ -587,11 +581,11 @@ class Fun(commands.Cog, name="🎮 Diversión"):
         bottom_box = [80, 220, 220, 300]
 
         name = textwrap.shorten(top, width=15, placeholder=top[:12]+"...")
-        draw.text((rect_text(top_box, name, font_top)), name, fill="black", align="center", font=font_top)
+        draw.text(get_center(top_box), name, fill="black", font=font_top, anchor="mm")
 
         if inscripcion is not None:
             field = "\n".join(textwrap.wrap(inscripcion, 17, max_lines=4, placeholder="..."))
-            draw.multiline_text((rect_text(bottom_box, field, font)), field, fill="black", align="center", font=font)
+            draw.multiline_text(get_center(bottom_box), field, fill="black", font=font, anchor="mm", align="center")
 
         img.save(temp, "png")
         temp.seek(0)
