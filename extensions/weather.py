@@ -14,14 +14,16 @@ class Weather(commands.Cog, name="Clima"):
 		# Try multiple query formats
 		search_queries = [ciudad]
 		
-		# Add variations: split by comma, reverse order
+		# Add variations
 		if "," in ciudad:
 			search_queries.append(ciudad.replace(",", " "))
 		else:
 			parts = ciudad.split()
 			if len(parts) >= 2:
-				# Try "city country" as "country, city"
 				search_queries.append(f"{parts[-1]}, {' '.join(parts[:-1])}")
+				# Try each word individually from start
+				for i in range(len(parts)):
+					search_queries.append(" ".join(parts[:i+1]))
 		
 		async with aiohttp.ClientSession() as session:
 			location = None
