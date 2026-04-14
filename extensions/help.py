@@ -47,7 +47,7 @@ class HelpView(ui.View):
 		embed = discord.Embed(
 			title="📚 Centro de Ayuda de Autumn",
 			description="Selecciona una categoría del menú para ver sus comandos.",
-			color=discord.Color.orange()
+			color=discord.Color.purple()
 		)
 		
 		# Dynamically build category list
@@ -70,7 +70,7 @@ class HelpView(ui.View):
 		
 		embed = discord.Embed(
 			title=f"📁 {category}",
-			color=discord.Color.orange()
+			color=discord.Color.purple()
 		)
 		
 		commands = self.get_commands_for_cog(category)
