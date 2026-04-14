@@ -425,8 +425,8 @@ class AkinatorGuessView(discord.ui.View):
             await self.cog.akinator.choose(self.user_id)
             game = self.cog.akinator.get_game(self.user_id)
             embed = discord.Embed(
-                title="🎉 ¡Sabía que lo adivinaría!",
-                description="¡Gracias por jugar!",
+                title="🎉 ¡Adiviné!",
+                description=game.question.replace(" !", "!"),
                 color=discord.Color.gold()
             )
             embed.add_field(name="Personaje:", value=f"**{game.name_proposition}**", inline=False)
