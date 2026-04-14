@@ -59,4 +59,4 @@ fly deploy
 
 ## Licencia
 
-MIT
+CC0 1.0 Universal
