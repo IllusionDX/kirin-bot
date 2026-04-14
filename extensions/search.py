@@ -7,7 +7,7 @@ import re
 from defs import get_json_api
 from config import filters
 
-class Search(commands.Cog, name="Busqueda"):
+class Search(commands.Cog, name="🔍 Busqueda"):
 	def __init__(self, client):
 		self.client = client
 

@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 import aiohttp
 
-class Weather(commands.Cog, name="Clima"):
+class Weather(commands.Cog, name="🌤️ Clima"):
 	def __init__(self, client):
 		self.client = client
 

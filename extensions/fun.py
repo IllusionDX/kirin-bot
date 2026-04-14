@@ -8,7 +8,7 @@ from defs import replace_mentions, weapons
 from PIL import Image, ImageFont, ImageDraw
 import textwrap
 
-class Fun(commands.Cog, name="Diversión"):
+class Fun(commands.Cog, name="🎮 Diversión"):
 	def __init__(self, client):
 		self.client = client
 

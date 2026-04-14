@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-class Misc(commands.Cog, name="Miscelaneos"):
+class Misc(commands.Cog, name="⚙️ Miscelaneos"):
 	def __init__(self, Bot):
 		self.Bot = Bot
 
