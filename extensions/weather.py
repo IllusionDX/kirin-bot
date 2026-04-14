@@ -11,20 +11,36 @@ class Weather(commands.Cog, name="Clima"):
 	async def weather(self, interaction: discord.Interaction, ciudad: str):
 		await interaction.response.defer()
 
+		# Try multiple query formats
+		search_queries = [ciudad]
+		
+		# Add variations: split by comma, reverse order
+		if "," in ciudad:
+			search_queries.append(ciudad.replace(",", " "))
+		else:
+			parts = ciudad.split()
+			if len(parts) >= 2:
+				# Try "city country" as "country, city"
+				search_queries.append(f"{parts[-1]}, {' '.join(parts[:-1])}")
+		
 		async with aiohttp.ClientSession() as session:
-			# Geocoding: get coordinates from city name
-			geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={ciudad}&count=1&language=es&format=json"
-			async with session.get(geo_url) as r:
-				if r.status != 200:
-					await interaction.followup.send("Error al buscar la ciudad.")
-					return
-				geo_data = await r.json()
+			location = None
 			
-			if not geo_data.get("results"):
+			for query in search_queries:
+				geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={query}&count=1&language=es&format=json"
+				async with session.get(geo_url) as r:
+					if r.status != 200:
+						continue
+					geo_data = await r.json()
+				
+				if geo_data.get("results"):
+					location = geo_data["results"][0]
+					break
+			
+			if not location:
 				await interaction.followup.send(f"No se encontró la ciudad: {ciudad}")
 				return
 
-			location = geo_data["results"][0]
 			lat = location["latitude"]
 			lon = location["longitude"]
 			name = location.get("name", ciudad)
