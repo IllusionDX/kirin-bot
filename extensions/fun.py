@@ -12,6 +12,14 @@ from PIL import Image, ImageFont, ImageDraw
 import textwrap
 
 
+def akinator_expired_embed():
+    return discord.Embed(
+        title="⏰ Sesión expirada",
+        description="Tu sesión de Akinator ha expirado. Usa /akinator para jugar de nuevo.",
+        color=discord.Color.red()
+    )
+
+
 class WeaponSelectView(discord.ui.View):
     def __init__(self, game: DuelGame, message: discord.Message, cog):
         super().__init__(timeout=60)
@@ -201,6 +209,12 @@ class AkinatorStartView(discord.ui.View):
         self.cog = cog
         self.user_id = user_id
     
+    async def on_timeout(self):
+        try:
+            await self.message.edit(embed=akinator_expired_embed(), view=None)
+        except:
+            pass
+    
     @discord.ui.button(label="Comenzar", custom_id="aki_start", emoji="▶️", style=discord.ButtonStyle.success)
     async def start(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
@@ -208,12 +222,14 @@ class AkinatorStartView(discord.ui.View):
             return
         
         await interaction.response.defer()
+        self.stop()
         
         try:
             await self.cog.akinator.start(self.user_id)
             
             view = AkinatorGameView(self.cog, self.user_id)
             view.update_question()
+            view.message = await interaction.original_response()
             
             await interaction.edit_original_response(
                 content=None,
@@ -230,9 +246,15 @@ class AkinatorStartView(discord.ui.View):
 
 class AkinatorGameView(discord.ui.View):
     def __init__(self, cog, user_id):
-        super().__init__(timeout=120)
+        super().__init__(timeout=60)
         self.cog = cog
         self.user_id = user_id
+    
+    async def on_timeout(self):
+        if self.cog.akinator.get_game(self.user_id):
+            if not self.cog.akinator.is_win(self.user_id) and not self.cog.akinator.is_finished(self.user_id):
+                self.cog.akinator.remove_game(self.user_id)
+                await self.message.edit(embed=akinator_expired_embed(), view=None)
     
     def update_question(self):
         self.current_question = self.cog.akinator.get_question(self.user_id)
@@ -281,14 +303,24 @@ class AkinatorGameView(discord.ui.View):
             return
         
         await interaction.response.defer()
+        self.stop()
+        
+        if not self.cog.akinator.get_game(self.user_id):
+            await interaction.edit_original_response(
+                embed=akinator_expired_embed(),
+                view=None
+            )
+            return
         
         try:
             await self.cog.akinator.back(self.user_id)
-            self.update_question()
+            view = AkinatorGameView(self.cog, self.user_id)
+            view.update_question()
+            view.message = await interaction.original_response()
             await interaction.edit_original_response(
                 content=None,
-                embed=self.get_question_embed(),
-                view=self
+                embed=view.get_question_embed(),
+                view=view
             )
         except Exception as e:
             await interaction.followup.send(f"No puedes volver más atrás: {e}", ephemeral=True)
@@ -299,6 +331,14 @@ class AkinatorGameView(discord.ui.View):
             return
         
         await interaction.response.defer()
+        self.stop()
+        
+        if not self.cog.akinator.get_game(self.user_id):
+            await interaction.edit_original_response(
+                embed=akinator_expired_embed(),
+                view=None
+            )
+            return
         
         try:
             await self.cog.akinator.answer(self.user_id, answer)
@@ -318,6 +358,8 @@ class AkinatorGameView(discord.ui.View):
                 
                 guess_view = AkinatorGuessView(self.cog, self.user_id)
                 await interaction.edit_original_response(content=None, embed=embed, view=guess_view)
+                # Pass message reference for guess view timeout
+                guess_view.message = await interaction.original_response()
                 return
             
             if self.cog.akinator.is_finished(self.user_id):
@@ -327,13 +369,16 @@ class AkinatorGameView(discord.ui.View):
                     color=discord.Color.red()
                 )
                 await interaction.edit_original_response(content=None, embed=embed, view=None)
-                self.cog.akinator.remove_game(self.user_id)
                 return
             
+            # Refresh view with new timeout
+            view = AkinatorGameView(self.cog, self.user_id)
+            view.update_question()
+            view.message = await interaction.original_response()
             await interaction.edit_original_response(
                 content=None,
-                embed=self.get_question_embed(),
-                view=self
+                embed=view.get_question_embed(),
+                view=view
             )
         except Exception as e:
             import traceback
@@ -350,6 +395,15 @@ class AkinatorGuessView(discord.ui.View):
         super().__init__(timeout=60)
         self.cog = cog
         self.user_id = user_id
+        self.message = None
+    
+    async def on_timeout(self):
+        self.cog.akinator.remove_game(self.user_id)
+        try:
+            if self.message:
+                await self.message.edit(embed=akinator_expired_embed(), view=None)
+        except:
+            pass
     
     @discord.ui.button(label="¡Sí!", custom_id="guess_yes", emoji="✅", style=discord.ButtonStyle.success)
     async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -358,6 +412,14 @@ class AkinatorGuessView(discord.ui.View):
             return
         
         await interaction.response.defer()
+        self.stop()
+        
+        if not self.cog.akinator.get_game(self.user_id):
+            await interaction.edit_original_response(
+                embed=akinator_expired_embed(),
+                view=None
+            )
+            return
         
         try:
             await self.cog.akinator.choose(self.user_id)
@@ -384,6 +446,14 @@ class AkinatorGuessView(discord.ui.View):
             return
         
         await interaction.response.defer()
+        self.stop()
+        
+        if not self.cog.akinator.get_game(self.user_id):
+            await interaction.edit_original_response(
+                embed=akinator_expired_embed(),
+                view=None
+            )
+            return
         
         try:
             await self.cog.akinator.exclude(self.user_id)
@@ -400,6 +470,7 @@ class AkinatorGuessView(discord.ui.View):
             
             view = AkinatorGameView(self.cog, self.user_id)
             view.update_question()
+            view.message = await interaction.original_response()
             
             await interaction.edit_original_response(
                 content=None,
@@ -425,15 +496,16 @@ class Fun(commands.Cog, name="🎮 Diversión"):
             await interaction.response.send_message("Ya tienes una partida activa. Responde a las preguntas anteriores.", ephemeral=True)
             return
         
+        start_view = AkinatorStartView(self, user_id)
         await interaction.response.send_message(
             embed=discord.Embed(
                 title="🎯 Akinator",
                 description="Piensa en un personaje (real o ficticio) y responde a mis preguntas.",
                 color=discord.Color.from_rgb(33, 150, 243)
             ),
-            view=AkinatorStartView(self, user_id),
-            ephemeral=True
+            view=start_view
         )
+        start_view.message = await interaction.original_response()
     
     @app_commands.command(name="8ball", description="Haz una pregunta de si o no y recibe una respuesta potencialmente absurda.")
     async def ball(self, interaction: discord.Interaction, pregunta: str):
