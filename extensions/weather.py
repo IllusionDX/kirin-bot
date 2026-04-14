@@ -11,42 +11,27 @@ class Weather(commands.Cog, name="Clima"):
 	async def weather(self, interaction: discord.Interaction, ciudad: str):
 		await interaction.response.defer()
 
-		# Try multiple query formats
-		search_queries = [ciudad]
-		
-		# Add variations
-		if "," in ciudad:
-			search_queries.append(ciudad.replace(",", " "))
-		else:
-			parts = ciudad.split()
-			if len(parts) >= 2:
-				search_queries.append(f"{parts[-1]}, {' '.join(parts[:-1])}")
-				# Try each word individually from start
-				for i in range(len(parts)):
-					search_queries.append(" ".join(parts[:i+1]))
-		
+		headers = {"User-Agent": "KirinBot/1.0 (Discord Bot)"}
+
 		async with aiohttp.ClientSession() as session:
-			location = None
-			
-			for query in search_queries:
-				geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={query}&count=1&language=es&format=json"
-				async with session.get(geo_url) as r:
-					if r.status != 200:
-						continue
-					geo_data = await r.json()
-				
-				if geo_data.get("results"):
-					location = geo_data["results"][0]
-					break
-			
-			if not location:
+			# Geocoding with Nominatim (better for "city country" queries)
+			geo_url = f"https://nominatim.openstreetmap.org/search?q={ciudad}&format=json&limit=1"
+			async with session.get(geo_url, headers=headers) as r:
+				if r.status != 200:
+					await interaction.followup.send("Error al buscar la ciudad.")
+					return
+				geo_data = await r.json()
+
+			if not geo_data:
 				await interaction.followup.send(f"No se encontró la ciudad: {ciudad}")
 				return
 
-			lat = location["latitude"]
-			lon = location["longitude"]
-			name = location.get("name", ciudad)
-			country = location.get("country", "")
+			location = geo_data[0]
+			lat = float(location["lat"])
+			lon = float(location["lon"])
+			name = location.get("display_name", ciudad)
+			# Extract country from display_name
+			country = location.get("display_name", "").split(",")[-1].strip() if "," in location.get("display_name", "") else ""
 
 			# Weather: get current weather
 			weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto"
@@ -87,12 +72,15 @@ class Weather(commands.Cog, name="Clima"):
 			}
 			condition = weather_conditions.get(code, f"Código: {code}")
 
-		embed = discord.Embed(title=f"Clima en {name}, {country}", color=discord.Color.blue())
+		# Shorten name to just city
+		name_short = name.split(",")[0] if "," in name else name
+		
+		embed = discord.Embed(title=f"Clima en {name_short}, {country}", color=discord.Color.blue())
 		embed.add_field(name="🌡️ Temperatura", value=f"{temp}°C", inline=True)
 		embed.add_field(name="💧 Humedad", value=f"{humidity}%", inline=True)
 		embed.add_field(name="💨 Viento", value=f"{wind} km/h", inline=True)
 		embed.add_field(name="☁️ Condición", value=condition, inline=False)
-		embed.set_footer(text="Datos de Open-Meteo")
+		embed.set_footer(text="Datos de Open-Meteo | Geocodificación por OpenStreetMap")
 
 		await interaction.followup.send(embed=embed)
 
