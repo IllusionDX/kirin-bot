@@ -61,7 +61,7 @@ class Fun(commands.Cog, name="🎮 Diversión"):
 
 		await interaction.response.send_message(embed=embed)
 
-	@app_commands.command(name="rip", description="Crea una tumba con dedicatoria para tus amigos.")
+	@app_commands.command(name="rip", description="Crea una tumba con dedicatoria.")
 	async def rip(self, interaction: discord.Interaction, usuario: str = None, *, inscripcion: str = None):
 		def rect_text(box, text, font):
 			x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
@@ -122,7 +122,7 @@ class Fun(commands.Cog, name="🎮 Diversión"):
 			"channel": interaction.channel
 		}
 
-	@app_commands.command(name="accept", description="Acepta un desafío")
+	@app_commands.command(name="accept", description="Acepta un desafío.")
 	async def accept(self, interaction: discord.Interaction):
 		pending = getattr(self.client, 'pending_challenges', {})
 		if interaction.user.id in pending:
@@ -132,7 +132,7 @@ class Fun(commands.Cog, name="🎮 Diversión"):
 		else:
 			await interaction.response.send_message("No tienes ningún desafío pendiente.")
 
-	@app_commands.command(name="reject", description="Rechaza un desafío")
+	@app_commands.command(name="reject", description="Rechaza un desafío.")
 	async def reject(self, interaction: discord.Interaction):
 		pending = getattr(self.client, 'pending_challenges', {})
 		if interaction.user.id in pending:
