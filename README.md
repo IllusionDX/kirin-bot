@@ -1,23 +1,62 @@
 # Kirin Bot
-A discord bot I made for my server, mainly just for fun.
 
-It's currently very early in development, even though it has existed for 2 years now! I just haven't put the time to improve it.
-Anyways I decided to publish it here and make it public, as the license says you can do anything you want with it. 
-It's current feature set is very limited, it only has a few commands.
+Un bot de Discord para mi servidor, principalmente para divertirse.
 
-Those include:
+Está en desarrollo activo. Actualmente tiene:
 
-- A basic derpibooru search with an embed,
-- A 1v1 challenge, a basic game copied from a defunct bot called AnthBot.
-- An 8ball command with some unfunny lines.
+### 🎮 Diversión
+- **/akinator** - Juega al Akinator (adivina tu personaje)
+- **/8ball** - Haz una pregunta sí/no a la bola mágica
+- **/challenge** - Desafía a otros jugadores a un duelo
+- **/rip** - Crea una tumba con dedicatoria
 
-It's currently available only in Spanish, the code itself is a mess, but I'll work to make to fully in English
-and then use an internationalization library to translate it to multiple languages.
-Usage
----------------	
-You will need the following things to host this bot by yourself:
+### 🔍 Búsqueda
+- **/derpibooru** - Busca imágenes en Derpibooru
 
-- At least Python 3.8 and pip to download the requirements
-- Set an environment variable called "BOT_TOKEN" and put your bot's token from the developer portal.
+### 🌤️ Utilidad
+- **/weather** - Consulta el clima de una ciudad
+- **/say** - Haz que el bot diga algo
+- **/help** - Muestra la ayuda
 
-Once it gets to the point I consider it presentable enough it will be made fully public and available for everyone, then you would just invite it.
+## Requisitos
+
+- Python 3.10+
+- discord.py >= 2.7.0
+- python-dotenv >= 1.0.0
+- Pillow >= 10.0.0
+- aiohttp >= 3.9.0
+- akinator >= 2.0.0
+
+## Instalación
+
+1. Instalar dependencias:
+```bash
+pip install -r requirements.txt
+```
+
+2. Crear archivo `.env`:
+```
+TOKEN=tu_token_del_bot
+```
+
+3. Ejecutar el bot:
+```bash
+python init.py
+```
+
+## Despliegue
+
+### Docker
+```bash
+docker build -t kirin-bot .
+docker run -d --env TOKEN=tu_token kirin-bot
+```
+
+### Fly.io
+```bash
+fly deploy
+```
+
+## Licencia
+
+MIT
