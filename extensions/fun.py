@@ -6,9 +6,10 @@ from discord.ext import commands
 import random
 import io
 from config import PREFIX
-from defs import replace_mentions, create_error_embed
+from defs import create_error_embed
 from classes.duel import DuelGame, WeaponSelectView
 from classes.akinator_game import AkinatorGame, AkinatorStartView, AkinatorGameView, AkinatorGuessView
+from classes.dice_roller import DiceRoller
 from PIL import Image, ImageFont, ImageDraw
 import textwrap
 
@@ -179,63 +180,34 @@ class Fun(commands.Cog, name="🎮 Diversión"):
         view = WeaponSelectView(game, None, self)
         await interaction.response.send_message(embed=embed, view=view)
 
-    @app_commands.command(name="roll", description="Lanza dados. Usa '2d6' para 2 dados de 6 caras o solo '20' para un d20.")
+    @app_commands.command(name="roll", description="Lanza dados RPG. Usa '2d6+3', '1d20+5', '(2d6+2d4)*2', etc.")
     async def roll(self, interaction: discord.Interaction, dados: str):
-        # Parse the input: can be "2d6", "d20", or just "6"
-        dados = dados.lower().strip()
+        try:
+            roller = DiceRoller(dados)
+            total = roller.roll()
 
-        # Pattern: optional number, d, number (e.g., "2d6", "d20", "3d8")
-        match = re.match(r'^(\d*)d?(\d+)$', dados)
+            # Get the breakdown for complex expressions
+            description = roller.get_breakdown()
 
-        if not match:
+            embed = discord.Embed(
+                title="🎲 Lanzamiento de Dados",
+                description=description,
+                color=discord.Color.blue()
+            )
+            embed.set_footer(text=f"Expresión: {dados} • Solicitado por {interaction.user.display_name}", icon_url=interaction.user.display_avatar)
+
+            await interaction.response.send_message(embed=embed)
+
+        except ValueError as e:
             await interaction.response.send_message(
-                embed=create_error_embed("Formato inválido. Usa: `20` (dado de 20), `2d6` (2 dados de 6), `d8` (dado de 8)"),
+                embed=create_error_embed(f"{e}\n\nEjemplos: `2d6+3`, `1d20+5`, `(2d6+2d4)*2`"),
                 ephemeral=True
             )
-            return
-
-        num_dice_str, sides_str = match.groups()
-        num_dice = int(num_dice_str) if num_dice_str else 1
-        sides = int(sides_str)
-
-        # Limits
-        if num_dice < 1 or num_dice > 100:
+        except Exception:
             await interaction.response.send_message(
-                embed=create_error_embed("Solo puedo lanzar entre 1 y 100 dados."),
+                embed=create_error_embed("Expresión inválida. Usa notación de dados como `2d6+3`, `1d20+5`, `(2d6+2d4)*2`"),
                 ephemeral=True
             )
-            return
-
-        if sides < 2 or sides > 1000:
-            await interaction.response.send_message(
-                embed=create_error_embed("Los dados deben tener entre 2 y 1000 caras."),
-                ephemeral=True
-            )
-            return
-
-        # Roll the dice
-        rolls = [random.randint(1, sides) for _ in range(num_dice)]
-        total = sum(rolls)
-
-        # Build the result message
-        if num_dice == 1:
-            description = f"🎲 ¡Sacaste **{rolls[0]}**!"
-        else:
-            rolls_str = " + ".join(str(r) for r in rolls)
-            if len(rolls_str) > 1000:
-                # Too many rolls to display individually
-                description = f"🎲 Lanzaste **{num_dice}d{sides}**\n📊 Total: **{total}**"
-            else:
-                description = f"🎲 Lanzaste **{num_dice}d{sides}**\n🎯 Resultados: {rolls_str}\n📊 Total: **{total}**"
-
-        embed = discord.Embed(
-            title="🎲 Lanzamiento de Dados",
-            description=description,
-            color=discord.Color.blue()
-        )
-        embed.set_footer(text=f"Solicitado por {interaction.user.display_name}", icon_url=interaction.user.display_avatar)
-
-        await interaction.response.send_message(embed=embed)
 
 
 async def setup(client):

@@ -10,7 +10,7 @@ Está en desarrollo activo. Actualmente tiene:
 - **/challenge** - Desafía a otros jugadores a un duelo
 - **/coinflip** - Lanza una moneda (cara o cruz)
 - **/rip** - Crea una tumba con dedicatoria
-- **/roll** - Lanza dados. Soporta formatos: `20`, `2d6`, `d8`
+- **/roll** - Lanza dados RPG. Soporta: `20`, `2d6+3`, `1d20+5`, `(2d6+2d4)*2`, etc.
 
 ### 🔍 Búsqueda
 - **/derpibooru** - Busca imágenes en Derpibooru
