@@ -1,6 +1,17 @@
+import discord
 from discord.ext import commands
 import aiohttp
 import re
+
+
+def create_error_embed(message: str, title: str = "❌ Error") -> discord.Embed:
+    """Create a reusable error embed with custom message."""
+    return discord.Embed(
+        title=title,
+        description=message,
+        color=discord.Color.red()
+    )
+
 
 def print_frame(str):
 	str = str.splitlines()

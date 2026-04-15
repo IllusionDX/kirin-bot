@@ -6,7 +6,7 @@ from discord.ext import commands
 import random
 import io
 from config import PREFIX
-from defs import replace_mentions
+from defs import replace_mentions, create_error_embed
 from classes.duel import DuelGame, WeaponSelectView
 from classes.akinator_game import AkinatorGame, AkinatorStartView, AkinatorGameView, AkinatorGuessView
 from PIL import Image, ImageFont, ImageDraw
@@ -189,7 +189,7 @@ class Fun(commands.Cog, name="🎮 Diversión"):
 
         if not match:
             await interaction.response.send_message(
-                "Formato inválido. Usa: `20` (dado de 20), `2d6` (2 dados de 6), `d8` (dado de 8)",
+                embed=create_error_embed("Formato inválido. Usa: `20` (dado de 20), `2d6` (2 dados de 6), `d8` (dado de 8)"),
                 ephemeral=True
             )
             return
@@ -200,11 +200,17 @@ class Fun(commands.Cog, name="🎮 Diversión"):
 
         # Limits
         if num_dice < 1 or num_dice > 100:
-            await interaction.response.send_message("Solo puedo lanzar entre 1 y 100 dados.", ephemeral=True)
+            await interaction.response.send_message(
+                embed=create_error_embed("Solo puedo lanzar entre 1 y 100 dados."),
+                ephemeral=True
+            )
             return
 
         if sides < 2 or sides > 1000:
-            await interaction.response.send_message("Los dados deben tener entre 2 y 1000 caras.", ephemeral=True)
+            await interaction.response.send_message(
+                embed=create_error_embed("Los dados deben tener entre 2 y 1000 caras."),
+                ephemeral=True
+            )
             return
 
         # Roll the dice
