@@ -192,9 +192,9 @@ class DiceRoller:
         return self._evaluate_postfix()
 
     def get_breakdown(self) -> str:
-        """Get a detailed breakdown of the roll for verbose mode."""
+        """Get a detailed breakdown of the roll for verbose mode (without result header)."""
         if not self.roll_results:
-            return f"Resultado: **{self.total}**"
+            return ""
 
         # Rebuild expression substituting each dice token with its rolled value(s)
         dice_iter = iter(self.roll_results)
@@ -231,14 +231,13 @@ class DiceRoller:
 
         detail_str = "\n".join(dice_details)
         return (
-            f"Resultado: **{self.total}**\n\n"
             f"`{expression_with_values}` = **{self.total}**\n\n"
             f"{detail_str}"
         )
 
     def get_simple_result(self) -> str:
         """Get simple result showing just the total."""
-        return f"**{self.total}**"
+        return f"🎲 ¡Sacaste **{self.total}**!"
 
 
 def validate_dice_expression(expression: str) -> Tuple[bool, str]:
@@ -283,13 +282,13 @@ class DiceRollView(discord.ui.View):
         button.disabled = True
         button.label = "Desglose visible"
 
-        # Get detailed breakdown
+        # Get detailed breakdown (without result, just dice details)
         breakdown = self.roller.get_breakdown()
 
         await interaction.response.edit_message(
             embed=discord.Embed(
                 title="🎲 Tirada de Dados",
-                description=f"Expresión: `{self.roller.expression}`\n\n{breakdown}",
+                description=f"🎲 ¡Sacaste **{self.roller.total}**!\n\n{breakdown}",
                 color=discord.Color.blue()
             ).set_footer(
                 text=f"Solicitado por {interaction.user.display_name}",
