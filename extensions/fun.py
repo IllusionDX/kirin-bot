@@ -191,7 +191,7 @@ class Fun(commands.Cog, name="🎮 Diversión"):
 
             embed = discord.Embed(
                 title="🎲 Tirada de Dados",
-                description=f"Expresión: `{expresion}`\n\nResultado: {simple_result}",
+                description=simple_result,
                 color=discord.Color.blue()
             )
             embed.set_footer(text=f"Solicitado por {interaction.user.display_name}", icon_url=interaction.user.display_avatar)
