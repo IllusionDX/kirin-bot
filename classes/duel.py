@@ -46,7 +46,6 @@ class DuelGame:
     
     def next_turn(self):
         self.current_turn = self.p2 if self.current_turn == self.p1 else self.p1
-        self.round += 1
     
     def is_over(self):
         return self.p1_hp <= 0 or self.p2_hp <= 0
