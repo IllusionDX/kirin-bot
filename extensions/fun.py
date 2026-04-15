@@ -1,486 +1,16 @@
 import discord
 import asyncio
+import re
 from discord import app_commands
 from discord.ext import commands
 import random
 import io
 from config import PREFIX
 from defs import replace_mentions
-from classes.duel import DuelGame
-from classes.akinator_game import AkinatorGame
+from classes.duel import DuelGame, WeaponSelectView
+from classes.akinator_game import AkinatorGame, AkinatorStartView, AkinatorGameView, AkinatorGuessView
 from PIL import Image, ImageFont, ImageDraw
 import textwrap
-
-
-def akinator_expired_embed():
-    return discord.Embed(
-        title="⏰ Sesión expirada",
-        description="Tu sesión de Akinator ha expirado. Usa /akinator para jugar de nuevo.",
-        color=discord.Color.red()
-    )
-
-
-class WeaponSelectView(discord.ui.View):
-    def __init__(self, game: DuelGame, message: discord.Message, cog):
-        super().__init__(timeout=60)
-        self.game = game
-        self.message = message
-        self.cog = cog
-        
-        for weapon in DuelGame.weapons:
-            button = discord.ui.Button(
-                label=f"{weapon['icon']} {weapon['name']}",
-                style=discord.ButtonStyle.primary
-            )
-            button.callback = self.make_callback(weapon)
-            self.add_item(button)
-    
-    def make_callback(self, weapon):
-        async def callback(interaction: discord.Interaction):
-            if self.game.is_bot:
-                if interaction.user.id != self.game.p1.id:
-                    await interaction.response.send_message("¡No es tu turno!", ephemeral=True)
-                    return
-                await self.handle_bot_turn(interaction, weapon)
-            else:
-                if interaction.user.id != self.game.current_turn.id:
-                    await interaction.response.send_message("¡No es tu turno!", ephemeral=True)
-                    return
-                await self.handle_pvp_turn(interaction, weapon)
-            
-            self.stop()
-        return callback
-    
-    async def handle_bot_turn(self, interaction: discord.Interaction, player_weapon):
-        p1_weapon = player_weapon
-        p2_weapon = random.choice(DuelGame.weapons)
-        
-        p1_hit = random.random() * 100 < p1_weapon['chance']
-        p2_hit = random.random() * 100 < p2_weapon['chance']
-        
-        p1_damage = p1_weapon['damage'] if p1_hit else 0
-        p2_damage = p2_weapon['damage'] if p2_hit else 0
-        
-        self.game.p2_hp -= p1_damage
-        self.game.p1_hp -= p2_damage
-        
-        embed = self.build_round_embed(
-            p1_weapon, p2_weapon,
-            p1_hit, p2_hit,
-            p1_damage, p2_damage
-        )
-        
-        if self.game.is_over():
-            await self.end_duel(interaction, embed, self.cog)
-        else:
-            self.game.round += 1
-            embed.description += f"\n\n🎯 **Ronda {self.game.round}** - ¡Elige tu arma, **{self.game.p1.display_name}**!"
-            view = WeaponSelectView(self.game, self.message, self.cog)
-            await interaction.response.edit_message(embed=embed, view=view)
-    
-    async def handle_pvp_turn(self, interaction: discord.Interaction, weapon):
-        is_p1_turn = self.game.current_turn.id == self.game.p1.id
-        
-        if not hasattr(self.game, 'p1_weapon'):
-            self.game.p1_weapon = None
-        if not hasattr(self.game, 'p2_weapon'):
-            self.game.p2_weapon = None
-        
-        if is_p1_turn:
-            self.game.p1_weapon = weapon
-        else:
-            self.game.p2_weapon = weapon
-        
-        if self.game.p1_weapon and self.game.p2_weapon:
-            p1_hit = random.random() * 100 < self.game.p1_weapon['chance']
-            p2_hit = random.random() * 100 < self.game.p2_weapon['chance']
-            
-            p1_damage = self.game.p1_weapon['damage'] if p1_hit else 0
-            p2_damage = self.game.p2_weapon['damage'] if p2_hit else 0
-            
-            self.game.p2_hp -= p1_damage
-            self.game.p1_hp -= p2_damage
-            
-            embed = self.build_round_embed(
-                self.game.p1_weapon, self.game.p2_weapon,
-                p1_hit, p2_hit,
-                p1_damage, p2_damage
-            )
-            
-            self.game.p1_weapon = None
-            self.game.p2_weapon = None
-            
-            if self.game.is_over():
-                await self.end_duel(interaction, embed, self.cog)
-            else:
-                self.game.next_turn()
-                self.game.round += 1
-                embed.description += f"\n\n🎯 **Ronda {self.game.round}** - Le toca a **{self.game.current_turn.display_name}**"
-                view = WeaponSelectView(self.game, self.message, self.cog)
-                await interaction.response.edit_message(embed=embed, view=view)
-        else:
-            self.game.next_turn()
-            embed = self.build_status_embed()
-            view = WeaponSelectView(self.game, self.message, self.cog)
-            await interaction.response.edit_message(embed=embed, view=view)
-    
-    def build_status_embed(self, is_bot=False):
-        if is_bot:
-            next_turn = "🎯 **Tu turno** - ¡Elige tu arma!"
-            turn_num = self.game.round
-        else:
-            next_turn = f"🎯 Le toca a **{self.game.current_turn.display_name}**"
-            turn_num = self.game.round
-        
-        embed = discord.Embed(
-            title="⚔️ ¡Duelo!",
-            description=f"**Ronda {turn_num}** | {next_turn}",
-            color=discord.Color.orange()
-        )
-        embed.add_field(
-            name=f"❤️ {self.game.p1.display_name}",
-            value=f"**{self.game.p1_hp}** HP",
-            inline=True
-        )
-        embed.add_field(
-            name=f"❤️ {self.game.p2.display_name}",
-            value=f"**{self.game.p2_hp}** HP",
-            inline=True
-        )
-        embed.add_field(
-            name="🎯 Elige tu arma",
-            value="🗡️ Daga (80%) | 🏹 Ballesta (60%) | 🕸️ Red (20%)",
-            inline=False
-        )
-        return embed
-    
-    def build_round_embed(self, w1, w2, h1, h2, d1, d2):
-        p1_name = self.game.p1.display_name
-        p2_name = self.game.p2.display_name
-        
-        log_p1 = f"**{p1_name}** atacó con {w1['icon']} **{w1['name']}** "
-        if h1:
-            log_p1 += f"e hizo **{d1}** de daño. 💥"
-        else:
-            log_p1 += f"y falló! ❌"
-            
-        log_p2 = f"**{p2_name}** atacó con {w2['icon']} **{w2['name']}** "
-        if h2:
-            log_p2 += f"e hizo **{d2}** de daño. 💥"
-        else:
-            log_p2 += f"y falló! ❌"
-            
-        embed = discord.Embed(
-            title=f"⚔️ Resultados de la Ronda {self.game.round}",
-            description=f"{log_p1}\n{log_p2}",
-            color=discord.Color.red()
-        )
-        embed.add_field(
-            name=f"❤️ {p1_name}",
-            value=f"**{max(0, self.game.p1_hp)}** HP",
-            inline=True
-        )
-        embed.add_field(
-            name=f"❤️ {p2_name}",
-            value=f"**{max(0, self.game.p2_hp)}** HP",
-            inline=True
-        )
-        return embed
-    
-    async def end_duel(self, interaction, embed, cog):
-        winner = self.game.get_winner()
-        if winner:
-            embed.description += f"\n\n🏆 **{winner.display_name} GANA! 🎉**"
-            embed.color = discord.Color.green()
-        else:
-            embed.description += "\n\n🤝 **EMPATE!**"
-            embed.color = discord.Color.gold()
-        
-        key = self.game.get_key()
-        if key in cog.active_duels:
-            del cog.active_duels[key]
-        
-        await interaction.response.edit_message(embed=embed, view=None)
-
-
-class AkinatorStartView(discord.ui.View):
-    def __init__(self, cog, user_id):
-        super().__init__(timeout=60)
-        self.cog = cog
-        self.user_id = user_id
-    
-    async def on_timeout(self):
-        try:
-            await self.message.edit(embed=akinator_expired_embed(), view=None)
-        except:
-            pass
-    
-    @discord.ui.button(label="Comenzar", custom_id="aki_start", emoji="▶️", style=discord.ButtonStyle.success)
-    async def start(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("Este botón no es para ti.", ephemeral=True)
-            return
-        
-        await interaction.response.defer()
-        self.stop()
-        
-        try:
-            await self.cog.akinator.start(self.user_id)
-            
-            view = AkinatorGameView(self.cog, self.user_id)
-            view.update_question()
-            view.message = await interaction.original_response()
-            
-            await interaction.edit_original_response(
-                content=None,
-                embed=view.get_question_embed(),
-                view=view
-            )
-        except Exception as e:
-            import traceback
-            await interaction.edit_original_response(
-                content=f"Error al iniciar: {e}\n\n```\n{traceback.format_exc()[:500]}\n```",
-                view=None
-            )
-
-
-class AkinatorGameView(discord.ui.View):
-    def __init__(self, cog, user_id):
-        super().__init__(timeout=60)
-        self.cog = cog
-        self.user_id = user_id
-    
-    async def on_timeout(self):
-        if self.cog.akinator.get_game(self.user_id):
-            if not self.cog.akinator.is_win(self.user_id) and not self.cog.akinator.is_finished(self.user_id):
-                self.cog.akinator.remove_game(self.user_id)
-                await self.message.edit(embed=akinator_expired_embed(), view=None)
-    
-    def update_question(self):
-        self.current_question = self.cog.akinator.get_question(self.user_id)
-    
-    def get_question_embed(self):
-        prog = round(self.cog.akinator.get_progress(self.user_id))
-        step = self.cog.akinator.get_step(self.user_id)
-        
-        r = min(255, int(prog * 2.55))
-        g = min(165, int(prog * 1.2))
-        b = max(0, 255 - int(prog * 2.55))
-        color = discord.Color.from_rgb(r, g, b)
-        
-        filled = int(prog / 10)
-        bar = "🟧" * filled + "⬛" * (10 - filled)
-        
-        embed = discord.Embed(
-            title=f"🎯 Pregunta #{step + 1}",
-            description=f"### {self.current_question}",
-            color=color
-        )
-        embed.add_field(name="Progresión", value=f"{bar} **{prog}%**", inline=False)
-        embed.set_footer(text="Responde con los botones de abajo")
-        return embed
-    
-    @discord.ui.button(label="Sí", custom_id="aki_yes", emoji="✅", style=discord.ButtonStyle.success)
-    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._answer(interaction, "yes")
-    
-    @discord.ui.button(label="No", custom_id="aki_no", emoji="❌", style=discord.ButtonStyle.danger)
-    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._answer(interaction, "no")
-    
-    @discord.ui.button(label="Probablemente", custom_id="aki_probably", emoji="🤔", style=discord.ButtonStyle.secondary)
-    async def probably(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._answer(interaction, "probably")
-    
-    @discord.ui.button(label="No sé", custom_id="aki_dont_know", emoji="❓", style=discord.ButtonStyle.secondary)
-    async def dont_know(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._answer(interaction, "i don't know")
-    
-    @discord.ui.button(label="Atrás", custom_id="aki_back", emoji="🔙", style=discord.ButtonStyle.primary)
-    async def back(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("Este no es tu juego.", ephemeral=True)
-            return
-        
-        await interaction.response.defer()
-        self.stop()
-        
-        if not self.cog.akinator.get_game(self.user_id):
-            await interaction.edit_original_response(
-                embed=akinator_expired_embed(),
-                view=None
-            )
-            return
-        
-        try:
-            await self.cog.akinator.back(self.user_id)
-            view = AkinatorGameView(self.cog, self.user_id)
-            view.update_question()
-            view.message = await interaction.original_response()
-            await interaction.edit_original_response(
-                content=None,
-                embed=view.get_question_embed(),
-                view=view
-            )
-        except Exception as e:
-            await interaction.followup.send(f"No puedes volver más atrás: {e}", ephemeral=True)
-    
-    async def _answer(self, interaction: discord.Interaction, answer: str):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("Este no es tu juego.", ephemeral=True)
-            return
-        
-        await interaction.response.defer()
-        self.stop()
-        
-        if not self.cog.akinator.get_game(self.user_id):
-            await interaction.edit_original_response(
-                embed=akinator_expired_embed(),
-                view=None
-            )
-            return
-        
-        try:
-            await self.cog.akinator.answer(self.user_id, answer)
-            self.update_question()
-            
-            if self.cog.akinator.is_win(self.user_id):
-                guess = self.cog.akinator.get_guess(self.user_id)
-                embed = discord.Embed(
-                    title="🤔 ¿Es este tu personaje?",
-                    description=f"¿Es **{guess['name']}**?",
-                    color=discord.Color.yellow()
-                )
-                if guess['description']:
-                    embed.add_field(name="Descripción:", value=guess['description'][:500], inline=False)
-                if guess['photo']:
-                    embed.set_image(url=guess['photo'])
-                
-                guess_view = AkinatorGuessView(self.cog, self.user_id)
-                await interaction.edit_original_response(content=None, embed=embed, view=guess_view)
-                # Pass message reference for guess view timeout
-                guess_view.message = await interaction.original_response()
-                return
-            
-            if self.cog.akinator.is_finished(self.user_id):
-                embed = discord.Embed(
-                    title="🏆 ¡Me rindo!",
-                    description="Has ganado.",
-                    color=discord.Color.red()
-                )
-                await interaction.edit_original_response(content=None, embed=embed, view=None)
-                return
-            
-            # Refresh view with new timeout
-            view = AkinatorGameView(self.cog, self.user_id)
-            view.update_question()
-            view.message = await interaction.original_response()
-            await interaction.edit_original_response(
-                content=None,
-                embed=view.get_question_embed(),
-                view=view
-            )
-        except Exception as e:
-            import traceback
-            await interaction.edit_original_response(
-                content=f"Error: {e}\n\n```\n{traceback.format_exc()[:500]}\n```",
-                embed=None,
-                view=None
-            )
-            self.cog.akinator.remove_game(self.user_id)
-
-
-class AkinatorGuessView(discord.ui.View):
-    def __init__(self, cog, user_id):
-        super().__init__(timeout=60)
-        self.cog = cog
-        self.user_id = user_id
-        self.message = None
-    
-    async def on_timeout(self):
-        self.cog.akinator.remove_game(self.user_id)
-        try:
-            if self.message:
-                await self.message.edit(embed=akinator_expired_embed(), view=None)
-        except:
-            pass
-    
-    @discord.ui.button(label="¡Sí!", custom_id="guess_yes", emoji="✅", style=discord.ButtonStyle.success)
-    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("Este no es tu juego.", ephemeral=True)
-            return
-        
-        await interaction.response.defer()
-        self.stop()
-        
-        if not self.cog.akinator.get_game(self.user_id):
-            await interaction.edit_original_response(
-                embed=akinator_expired_embed(),
-                view=None
-            )
-            return
-        
-        try:
-            await self.cog.akinator.choose(self.user_id)
-            game = self.cog.akinator.get_game(self.user_id)
-            embed = discord.Embed(
-                title="🎉 ¡Sabía que lo adivinaría!",
-                description=game.question.replace(" !", "!"),
-                color=discord.Color.gold()
-            )
-            embed.add_field(name="Personaje:", value=f"**{game.name_proposition}**", inline=False)
-            if getattr(game, 'photo', None):
-                embed.set_image(url=game.photo)
-            
-            await interaction.edit_original_response(content=None, embed=embed, view=None)
-            self.cog.akinator.remove_game(self.user_id)
-        except Exception as e:
-            await interaction.edit_original_response(content=f"Error: {e}", embed=None, view=None)
-            self.cog.akinator.remove_game(self.user_id)
-    
-    @discord.ui.button(label="No", custom_id="guess_no", emoji="❌", style=discord.ButtonStyle.danger)
-    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("Este no es tu juego.", ephemeral=True)
-            return
-        
-        await interaction.response.defer()
-        self.stop()
-        
-        if not self.cog.akinator.get_game(self.user_id):
-            await interaction.edit_original_response(
-                embed=akinator_expired_embed(),
-                view=None
-            )
-            return
-        
-        try:
-            await self.cog.akinator.exclude(self.user_id)
-            
-            if self.cog.akinator.is_finished(self.user_id):
-                embed = discord.Embed(
-                    title="🏆 ¡Me rindo!",
-                    description="Has ganado.",
-                    color=discord.Color.red()
-                )
-                await interaction.edit_original_response(content=None, embed=embed, view=None)
-                self.cog.akinator.remove_game(self.user_id)
-                return
-            
-            view = AkinatorGameView(self.cog, self.user_id)
-            view.update_question()
-            view.message = await interaction.original_response()
-            
-            await interaction.edit_original_response(
-                content=None,
-                embed=view.get_question_embed(),
-                view=view
-            )
-        except Exception as e:
-            await interaction.edit_original_response(content=f"Error: {e}", embed=None, view=None)
-            self.cog.akinator.remove_game(self.user_id)
-
 
 class Fun(commands.Cog, name="🎮 Diversión"):
     def __init__(self, client):
@@ -592,6 +122,20 @@ class Fun(commands.Cog, name="🎮 Diversión"):
 
         await interaction.followup.send(file=discord.File(filename="rip.png", fp=temp))
 
+    @app_commands.command(name="coinflip", description="Lanza una moneda y mira qué sale.")
+    async def coinflip(self, interaction: discord.Interaction):
+        result = random.choice(["cara", "cruz"])
+        emoji = "🪙" if result == "cara" else "📀"
+
+        embed = discord.Embed(
+            title="🪙 Tirada de Moneda",
+            description=f"{emoji} ¡Ha salido **{result.capitalize()}**!",
+            color=discord.Color.gold()
+        )
+        embed.set_footer(text=f"Solicitado por {interaction.user.display_name}", icon_url=interaction.user.display_avatar)
+
+        await interaction.response.send_message(embed=embed)
+
     @app_commands.command(name="challenge", description="Desafia a tus amigos a un duelo a muerte con cuchillos.")
     async def challenge(self, interaction: discord.Interaction, miembro: discord.Member):
         if miembro == interaction.user:
@@ -634,6 +178,58 @@ class Fun(commands.Cog, name="🎮 Diversión"):
 
         view = WeaponSelectView(game, None, self)
         await interaction.response.send_message(embed=embed, view=view)
+
+    @app_commands.command(name="roll", description="Lanza dados. Usa '2d6' para 2 dados de 6 caras o solo '20' para un d20.")
+    async def roll(self, interaction: discord.Interaction, dados: str):
+        # Parse the input: can be "2d6", "d20", or just "6"
+        dados = dados.lower().strip()
+
+        # Pattern: optional number, d, number (e.g., "2d6", "d20", "3d8")
+        match = re.match(r'^(\d*)d?(\d+)$', dados)
+
+        if not match:
+            await interaction.response.send_message(
+                "Formato inválido. Usa: `20` (dado de 20), `2d6` (2 dados de 6), `d8` (dado de 8)",
+                ephemeral=True
+            )
+            return
+
+        num_dice_str, sides_str = match.groups()
+        num_dice = int(num_dice_str) if num_dice_str else 1
+        sides = int(sides_str)
+
+        # Limits
+        if num_dice < 1 or num_dice > 100:
+            await interaction.response.send_message("Solo puedo lanzar entre 1 y 100 dados.", ephemeral=True)
+            return
+
+        if sides < 2 or sides > 1000:
+            await interaction.response.send_message("Los dados deben tener entre 2 y 1000 caras.", ephemeral=True)
+            return
+
+        # Roll the dice
+        rolls = [random.randint(1, sides) for _ in range(num_dice)]
+        total = sum(rolls)
+
+        # Build the result message
+        if num_dice == 1:
+            description = f"🎲 ¡Sacaste **{rolls[0]}**!"
+        else:
+            rolls_str = " + ".join(str(r) for r in rolls)
+            if len(rolls_str) > 1000:
+                # Too many rolls to display individually
+                description = f"🎲 Lanzaste **{num_dice}d{sides}**\n📊 Total: **{total}**"
+            else:
+                description = f"🎲 Lanzaste **{num_dice}d{sides}**\n🎯 Resultados: {rolls_str}\n📊 Total: **{total}**"
+
+        embed = discord.Embed(
+            title="🎲 Lanzamiento de Dados",
+            description=description,
+            color=discord.Color.blue()
+        )
+        embed.set_footer(text=f"Solicitado por {interaction.user.display_name}", icon_url=interaction.user.display_avatar)
+
+        await interaction.response.send_message(embed=embed)
 
 
 async def setup(client):
