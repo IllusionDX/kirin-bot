@@ -15,7 +15,7 @@ class Weather(commands.Cog, name="🌤️ Clima"):
 
 		async with aiohttp.ClientSession() as session:
 			# Geocoding with Nominatim (better for "city country" queries)
-			geo_url = f"https://nominatim.openstreetmap.org/search?q={ciudad}&format=json&limit=1"
+			geo_url = f"https://nominatim.openstreetmap.org/search?q={ciudad}&format=json&limit=1&accept-language=es"
 			async with session.get(geo_url, headers=headers) as r:
 				if r.status != 200:
 					await interaction.followup.send("Error al buscar la ciudad.")
