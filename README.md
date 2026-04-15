@@ -8,7 +8,9 @@ Está en desarrollo activo. Actualmente tiene:
 - **/akinator** - Juega al Akinator (adivina tu personaje)
 - **/8ball** - Haz una pregunta sí/no a la bola mágica
 - **/challenge** - Desafía a otros jugadores a un duelo
+- **/coinflip** - Lanza una moneda (cara o cruz)
 - **/rip** - Crea una tumba con dedicatoria
+- **/roll** - Lanza dados. Soporta formatos: `20`, `2d6`, `d8`
 
 ### 🔍 Búsqueda
 - **/derpibooru** - Busca imágenes en Derpibooru
