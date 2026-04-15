@@ -9,7 +9,7 @@ from config import PREFIX
 from defs import create_error_embed
 from classes.duel import DuelGame, WeaponSelectView
 from classes.akinator_game import AkinatorGame, AkinatorStartView, AkinatorGameView, AkinatorGuessView
-from classes.dice_roller import DiceRoller
+from classes.dice_roller import DiceRoller, DiceRollView
 from PIL import Image, ImageFont, ImageDraw
 import textwrap
 
@@ -181,22 +181,25 @@ class Fun(commands.Cog, name="🎮 Diversión"):
         await interaction.response.send_message(embed=embed, view=view)
 
     @app_commands.command(name="roll", description="Lanza dados RPG. Usa '2d6+3', '1d20+5', '(2d6+2d4)*2', etc.")
-    async def roll(self, interaction: discord.Interaction, dados: str):
+    async def roll(self, interaction: discord.Interaction, expresion: str):
         try:
-            roller = DiceRoller(dados)
+            roller = DiceRoller(expresion)
             total = roller.roll()
 
-            # Get the breakdown for complex expressions
-            description = roller.get_breakdown()
+            # Simple result initially
+            simple_result = roller.get_simple_result()
 
             embed = discord.Embed(
-                title="🎲 Lanzamiento de Dados",
-                description=description,
+                title="🎲 Tirada de Dados",
+                description=f"Expresión: `{expresion}`\n\nResultado: {simple_result}",
                 color=discord.Color.blue()
             )
-            embed.set_footer(text=f"Expresión: {dados} • Solicitado por {interaction.user.display_name}", icon_url=interaction.user.display_avatar)
+            embed.set_footer(text=f"Solicitado por {interaction.user.display_name}", icon_url=interaction.user.display_avatar)
 
-            await interaction.response.send_message(embed=embed)
+            # Create view with reveal button
+            view = DiceRollView(roller, interaction.user.id)
+
+            await interaction.response.send_message(embed=embed, view=view)
 
         except ValueError as e:
             await interaction.response.send_message(

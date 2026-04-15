@@ -1,6 +1,7 @@
 import random
 import re
 from typing import List, Tuple, Union
+import discord
 
 
 class DiceRoller:
@@ -61,6 +62,14 @@ class DiceRoller:
 
             # Unknown character
             raise ValueError(f"Carácter inválido: '{char}'")
+
+        # If only one token and it's a number, treat it as a die (e.g., "20" -> "1d20")
+        if len(self.tokens) == 1 and isinstance(self.tokens[0], int):
+            num = self.tokens[0]
+            if num >= 2 and num <= 1000:
+                self.tokens[0] = (1, num)
+            else:
+                raise ValueError("Los dados deben tener entre 2 y 1000 caras.")
 
         return True
 
@@ -183,52 +192,53 @@ class DiceRoller:
         return self._evaluate_postfix()
 
     def get_breakdown(self) -> str:
-        """Get a detailed breakdown of the roll."""
+        """Get a detailed breakdown of the roll for verbose mode."""
         if not self.roll_results:
-            return str(self.total)
+            return f"Resultado: **{self.total}**"
 
-        # Build breakdown
-        breakdown_parts = []
-        dice_index = 0
-
-        for token in self.output_queue:
+        # Rebuild expression substituting each dice token with its rolled value(s)
+        dice_iter = iter(self.roll_results)
+        parts = []
+        for token in self.tokens:
             if isinstance(token, tuple):
-                dice_notation, results, total = self.roll_results[dice_index]
-                dice_index += 1
+                # Replace dice token with the actual rolls
+                notation, results, total = next(dice_iter)
                 if len(results) == 1:
-                    breakdown_parts.append(str(results[0]))
+                    parts.append(str(results[0]))
                 else:
-                    breakdown_parts.append(f"({' + '.join(map(str, results))})")
+                    # Wrap multi-die sum in parens so it reads cleanly
+                    parts.append(f"({'+'.join(map(str, results))})")
             elif isinstance(token, int):
-                breakdown_parts.append(str(token))
+                parts.append(str(token))
             else:
-                # Operator
-                if token in '+-*/':
-                    # Map operators to symbols
-                    op_map = {'+': '+', '-': '-', '*': '×', '/': '÷'}
-                    breakdown_parts.append(op_map.get(token, token))
+                # Operator or parenthesis — keep as-is with spacing
+                if token in '+-':
+                    parts.append(f" {token} ")
+                elif token in '*/':
+                    parts.append(f" {token} ")
+                else:
+                    parts.append(token)
 
-        # Also provide dice summary
-        dice_summary = []
+        expression_with_values = "".join(parts)
+
+        # Build per-die detail line
+        dice_details = []
         for notation, results, total in self.roll_results:
             if len(results) == 1:
-                dice_summary.append(f"{notation}: {results[0]}")
+                dice_details.append(f"🎲 {notation}: **{results[0]}**")
             else:
-                dice_summary.append(f"{notation}: {' + '.join(map(str, results))} = {total}")
+                dice_details.append(f"🎲 {notation}: {' + '.join(map(str, results))} = **{total}**")
 
-        if dice_summary:
-            return f"**{self.total}**\n📊 {' '.join(breakdown_parts)}\n🎲 {', '.join(dice_summary)}"
-        else:
-            return f"**{self.total}**\n📊 {' '.join(breakdown_parts)}"
+        detail_str = "\n".join(dice_details)
+        return (
+            f"Resultado: **{self.total}**\n\n"
+            f"`{expression_with_values}` = **{self.total}**\n\n"
+            f"{detail_str}"
+        )
 
     def get_simple_result(self) -> str:
-        """Get simple result for basic rolls."""
-        if len(self.roll_results) == 1 and len(self.roll_results[0][1]) == 1:
-            # Single die roll
-            return f"¡Sacaste **{self.total}**!"
-
-        # Multiple dice or complex expression
-        return f"Resultado: **{self.total}**"
+        """Get simple result showing just the total."""
+        return f"**{self.total}**"
 
 
 def validate_dice_expression(expression: str) -> Tuple[bool, str]:
@@ -241,3 +251,49 @@ def validate_dice_expression(expression: str) -> Tuple[bool, str]:
         return False, str(e)
     except Exception:
         return False, "Expresión inválida."
+
+
+class DiceRollView(discord.ui.View):
+    """View for dice roll with reveal button for detailed breakdown."""
+
+    def __init__(self, roller: DiceRoller, original_user_id: int):
+        super().__init__(timeout=300)  # 5 minute timeout
+        self.roller = roller
+        self.original_user_id = original_user_id
+        self.revealed = False
+
+    @discord.ui.button(label="Ver desglose", style=discord.ButtonStyle.secondary, emoji="📋")
+    async def reveal_breakdown(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Only the original user can reveal
+        if interaction.user.id != self.original_user_id:
+            await interaction.response.send_message(
+                "Solo el jugador que hizo la tirada puede ver el desglose.",
+                ephemeral=True
+            )
+            return
+
+        if self.revealed:
+            await interaction.response.send_message(
+                "El desglose ya está visible.",
+                ephemeral=True
+            )
+            return
+
+        self.revealed = True
+        button.disabled = True
+        button.label = "Desglose visible"
+
+        # Get detailed breakdown
+        breakdown = self.roller.get_breakdown()
+
+        await interaction.response.edit_message(
+            embed=discord.Embed(
+                title="🎲 Tirada de Dados",
+                description=f"Expresión: `{self.roller.expression}`\n\n{breakdown}",
+                color=discord.Color.blue()
+            ).set_footer(
+                text=f"Solicitado por {interaction.user.display_name}",
+                icon_url=interaction.user.display_avatar
+            ),
+            view=self
+        )
