@@ -199,15 +199,18 @@ class DiceRoller:
         # Rebuild expression substituting each dice token with its rolled value(s)
         dice_iter = iter(self.roll_results)
         parts = []
-        for token in self.tokens:
+        for i, token in enumerate(self.tokens):
             if isinstance(token, tuple):
                 # Replace dice token with the actual rolls
                 notation, results, total = next(dice_iter)
                 if len(results) == 1:
                     parts.append(str(results[0]))
                 else:
-                    # Wrap multi-die sum in parens so it reads cleanly
-                    parts.append(f"({'+'.join(map(str, results))})")
+                    # Wrap multi-die sum in parens so it reads cleanly, unless already wrapped
+                    if i > 0 and i < len(self.tokens) - 1 and self.tokens[i - 1] == '(' and self.tokens[i + 1] == ')':
+                        parts.append(f"{' + '.join(map(str, results))}")
+                    else:
+                        parts.append(f"({' + '.join(map(str, results))})")
             elif isinstance(token, int):
                 parts.append(str(token))
             else:
