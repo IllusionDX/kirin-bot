@@ -1,7 +1,5 @@
 import discord
-from discord.ext import commands
 import aiohttp
-import re
 
 
 def create_error_embed(message: str, title: str = "❌ Error") -> discord.Embed:
@@ -29,28 +27,7 @@ def print_frame(str):
 	print(l2 + "\n" + l1 + "\n")
 
 async def get_json_api(url, params):
-	async with aiohttp.ClientSession() as session:
-		async with session.get(url, params=params) as r:
-			if (r.status == 200):
-				return await r.json()
-
-async def replace_mentions(input_str, ctx):
-			async def get_name(mention):
-				member = await commands.MemberConverter().convert(ctx, mention)
-				name = member.display_name
-				return name
-			
-			dictionary = {}
-			new_str = ""
-			m_pattern = "([<@!]+[0-9]+[>])"
-
-			for match in re.finditer(m_pattern, input_str):
-				m = match.string[match.start():match.end()]
-				dictionary[f"{m}"] = await get_name(m)
-
-			def repl(match):
-				m = match.string[match.start():match.end()]
-				return dictionary[f"{m}"]
-
-			new_str = re.sub(m_pattern, repl, input_str)
-			return new_str
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params) as r:
+            if (r.status == 200):
+                return await r.json()
