@@ -285,6 +285,5 @@ class Fun(commands.Cog, name="🎮 Fun"):
                 ephemeral=True
             )
 
-
 async def setup(client):
     await client.add_cog(Fun(client))

@@ -5,7 +5,6 @@ import aiohttp
 from i18n import t
 from database import get_language
 
-
 class Weather(commands.Cog, name="🌤️ Weather"):
     def __init__(self, client):
         self.client = client

@@ -4,7 +4,6 @@ from discord.ext import commands
 from discord import ui
 from i18n import t
 
-
 class Help(commands.Cog, name="❓ Help"):
     def __init__(self, Bot):
         self.Bot = Bot
@@ -18,7 +17,6 @@ class Help(commands.Cog, name="❓ Help"):
         view = HelpView(self.Bot, guild_id)
         embed = view.get_main_embed(guild_id)
         await interaction.response.send_message(embed=embed, view=view)
-
 
 class HelpView(ui.View):
     def __init__(self, bot, guild_id=0):
@@ -137,7 +135,6 @@ class HelpView(ui.View):
             await interaction.response.edit_message(embed=embed, view=self)
             return True
         return True
-
 
 async def setup(Bot):
     await Bot.add_cog(Help(Bot))

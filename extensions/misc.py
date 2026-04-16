@@ -2,7 +2,6 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-
 class Misc(commands.Cog, name="⚙️ Misc"):
     def __init__(self, Bot):
         self.Bot = Bot
@@ -16,7 +15,6 @@ class Misc(commands.Cog, name="⚙️ Misc"):
             await interaction.response.send_message(mensaje)
         else:
             await interaction.response.send_message(mensaje)
-
 
 async def setup(Bot):
     await Bot.add_cog(Misc(Bot))

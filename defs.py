@@ -1,7 +1,6 @@
 import discord
 import aiohttp
 
-
 def create_error_embed(message: str, title: str = None) -> discord.Embed:
     """Create a reusable error embed with custom message."""
     return discord.Embed(
@@ -9,7 +8,6 @@ def create_error_embed(message: str, title: str = None) -> discord.Embed:
         description=message,
         color=discord.Color.red()
     )
-
 
 def create_notice_embed(message: str, title: str = None) -> discord.Embed:
     """Create a reusable notice/info embed with custom message."""
@@ -19,7 +17,6 @@ def create_notice_embed(message: str, title: str = None) -> discord.Embed:
         color=discord.Color.blue()
     )
 
-
 def create_success_embed(message: str, title: str = None) -> discord.Embed:
     """Create a reusable success embed with custom message."""
     return discord.Embed(
@@ -27,7 +24,6 @@ def create_success_embed(message: str, title: str = None) -> discord.Embed:
         description=message,
         color=discord.Color.green()
     )
-
 
 def print_frame(str):
     str = str.splitlines()

@@ -5,7 +5,6 @@ from database import get_language, set_language
 from i18n import t
 from defs import create_success_embed, create_error_embed
 
-
 class Settings(commands.Cog, name="🛠️ Settings"):
     def __init__(self, bot):
         self.bot = bot
@@ -39,7 +38,6 @@ class Settings(commands.Cog, name="🛠️ Settings"):
         if isinstance(error, app_commands.MissingPermissions):
             embed = create_error_embed(t(interaction.guild.id if interaction.guild else 0, "error_no_permissions"), t(interaction.guild.id if interaction.guild else 0, "error_title"))
             await interaction.response.send_message(embed=embed, ephemeral=True)
-
 
 async def setup(bot):
     await bot.add_cog(Settings(bot))
