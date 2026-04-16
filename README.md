@@ -1,26 +1,31 @@
 # Kirin Bot
 
-Un bot de Discord para mi servidor, principalmente para divertirse.
+A Discord bot for my server, primarily for fun. Supports English and Spanish.
 
-Está en desarrollo activo. Actualmente tiene:
+Currently in active development. Features:
 
-### 🎮 Diversión
-- **/akinator** - Juega al Akinator (adivina tu personaje)
-- **/8ball** - Haz una pregunta sí/no a la bola mágica
-- **/challenge** - Desafía a otros jugadores a un duelo
-- **/coinflip** - Lanza una moneda (cara o cruz)
-- **/rip** - Crea una tumba con dedicatoria
-- **/roll** - Lanza dados RPG. Soporta: `20`, `2d6+3`, `1d20+5`, `(2d6+2d4)*2`, etc.
+### 🎮 Fun
+- **/akinator** - Play Akinator (guess your character)
+- **/8ball** - Ask a yes/no question to the magic ball
+- **/challenge** - Challenge other players to a duel
+- **/coinflip** - Flip a coin (heads or tails)
+- **/rip** - Create a tombstone with a dedication
+- **/roll** - Roll RPG dice. Supports: `20`, `2d6+3`, `1d20+5`, `(2d6+2d4)*2`, etc.
 
-### 🔍 Búsqueda
-- **/derpibooru** - Busca imágenes en Derpibooru
+### 🔍 Search
+- **/derpibooru** - Search images on Derpibooru
 
-### 🌤️ Utilidad
-- **/weather** - Consulta el clima de una ciudad
-- **/say** - Haz que el bot diga algo
-- **/help** - Muestra la ayuda
+### ⛅ Weather
+- **/weather** - Check the weather for a city
 
-## Requisitos
+### ⚙️ Misc
+- **/say** - Make the bot say something
+- **/help** - Show help
+
+### 🛠️ Settings
+- **/language** - Set the bot's language for this server (requires Manage Server permission)
+
+## Requirements
 
 - Python 3.10+
 - discord.py >= 2.7.0
@@ -29,29 +34,29 @@ Está en desarrollo activo. Actualmente tiene:
 - aiohttp >= 3.9.0
 - akinator >= 2.0.0
 
-## Instalación
+## Installation
 
-1. Instalar dependencias:
+1. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Crear archivo `.env`:
+2. Create `.env` file:
 ```
-TOKEN=tu_token_del_bot
+TOKEN=your_bot_token
 ```
 
-3. Ejecutar el bot:
+3. Run the bot:
 ```bash
 python init.py
 ```
 
-## Despliegue
+## Deployment
 
 ### Docker
 ```bash
 docker build -t kirin-bot .
-docker run -d --env TOKEN=tu_token kirin-bot
+docker run -d --env TOKEN=your_token kirin-bot
 ```
 
 ### Fly.io
@@ -59,6 +64,6 @@ docker run -d --env TOKEN=tu_token kirin-bot
 fly deploy
 ```
 
-## Licencia
+## License
 
 CC0 1.0 Universal
