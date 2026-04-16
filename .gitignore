@@ -4,3 +4,4 @@ venv/
 *.txt
 .env
 .DS_Store
+*.db
