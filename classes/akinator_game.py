@@ -2,6 +2,7 @@ import discord
 import akinator
 import akinator.async_client as _aki_async_client
 from i18n import t
+from database import get_language
 
 _patch_done = False
 
@@ -172,7 +173,8 @@ class AkinatorStartView(discord.ui.View):
         self.stop()
 
         try:
-            await self.cog.akinator.start(self.user_id)
+            lang = get_language(self.guild_id)
+            await self.cog.akinator.start(self.user_id, language=lang)
 
             view = AkinatorGameView(self.cog, self.user_id, self.guild_id)
             view.update_question()
