@@ -2,6 +2,7 @@ import random
 import re
 from typing import List, Tuple, Union
 import discord
+from i18n import t
 
 
 class DiceRoller:
@@ -10,13 +11,14 @@ class DiceRoller:
     Supports: 2d6, d20, 2d6+1, (1d20+5)*2, 3d8+2d4-1, etc.
     """
 
-    def __init__(self, expression: str):
+    def __init__(self, expression: str, guild_id: int = 0):
         self.expression = expression.lower().replace(' ', '')
         self.tokens: List[Union[int, str, Tuple[int, int]]] = []
         self.output_queue: List[Union[int, str, Tuple[int, int]]] = []
         self.operator_stack: List[str] = []
         self.roll_results: List[Tuple[str, List[int], int]] = []
         self.total = 0
+        self.guild_id = guild_id
 
     def _tokenize(self) -> bool:
         """Tokenize the expression into dice rolls, numbers and operators."""
@@ -35,9 +37,9 @@ class DiceRoller:
 
                     # Limits
                     if num_dice < 1 or num_dice > 100:
-                        raise ValueError("Solo puedo lanzar entre 1 y 100 dados.")
+                        raise ValueError(t(self.guild_id, "dice_limit_count"))
                     if sides < 2 or sides > 1000:
-                        raise ValueError("Los dados deben tener entre 2 y 1000 caras.")
+                        raise ValueError(t(self.guild_id, "dice_limit_sides"))
 
                     self.tokens.append((num_dice, sides))
                     i += match.end()
@@ -49,7 +51,7 @@ class DiceRoller:
                 if match:
                     num = int(match.group())
                     if num > 1000000:
-                        raise ValueError("Números demasiado grandes.")
+                        raise ValueError(t(self.guild_id, "dice_numbers_too_large"))
                     self.tokens.append(num)
                     i += match.end()
                     continue
@@ -61,7 +63,7 @@ class DiceRoller:
                 continue
 
             # Unknown character
-            raise ValueError(f"Carácter inválido: '{char}'")
+            raise ValueError(t(self.guild_id, "dice_invalid_char", char=char))
 
         # If only one token and it's a number, treat it as a die (e.g., "20" -> "1d20")
         if len(self.tokens) == 1 and isinstance(self.tokens[0], int):
@@ -69,7 +71,7 @@ class DiceRoller:
             if num >= 2 and num <= 1000:
                 self.tokens[0] = (1, num)
             else:
-                raise ValueError("Los dados deben tener entre 2 y 1000 caras.")
+                raise ValueError(t(self.guild_id, "dice_must_have_sides"))
 
         return True
 
@@ -97,11 +99,11 @@ class DiceRoller:
             # Operator
             if token in '+-*/':
                 while (self.operator_stack and
-                       self.operator_stack[-1] != '(' and
-                       ((self._is_left_associative(token) and
-                         self._get_precedence(self.operator_stack[-1]) >= self._get_precedence(token)) or
-                        (not self._is_left_associative(token) and
-                         self._get_precedence(self.operator_stack[-1]) > self._get_precedence(token)))):
+                    self.operator_stack[-1] != '(' and
+                    ((self._is_left_associative(token) and
+                        self._get_precedence(self.operator_stack[-1]) >= self._get_precedence(token)) or
+                    (not self._is_left_associative(token) and
+                        self._get_precedence(self.operator_stack[-1]) > self._get_precedence(token)))):
                     self.output_queue.append(self.operator_stack.pop())
                 self.operator_stack.append(token)
                 i += 1
@@ -118,7 +120,7 @@ class DiceRoller:
                 while self.operator_stack and self.operator_stack[-1] != '(':
                     self.output_queue.append(self.operator_stack.pop())
                 if not self.operator_stack:
-                    raise ValueError("Paréntesis desbalanceados.")
+                    raise ValueError(t(self.guild_id, "dice_unbalanced_parens"))
                 self.operator_stack.pop()  # Remove '('
                 i += 1
                 continue
@@ -129,7 +131,7 @@ class DiceRoller:
         while self.operator_stack:
             op = self.operator_stack.pop()
             if op == '(':
-                raise ValueError("Paréntesis desbalanceados.")
+                raise ValueError(t(self.guild_id, "dice_unbalanced_parens"))
             self.output_queue.append(op)
 
         return True
@@ -162,7 +164,7 @@ class DiceRoller:
             # Operator
             if token in '+-*/':
                 if len(stack) < 2:
-                    raise ValueError("Expresión inválida.")
+                    raise ValueError(t(self.guild_id, "dice_invalid_expr"))
                 b = stack.pop()
                 a = stack.pop()
 
@@ -174,13 +176,13 @@ class DiceRoller:
                     result = a * b
                 elif token == '/':
                     if b == 0:
-                        raise ValueError("División por cero.")
+                        raise ValueError(t(self.guild_id, "dice_division_zero"))
                     result = a // b  # Integer division
 
                 stack.append(result)
 
         if len(stack) != 1:
-            raise ValueError("Expresión inválida.")
+            raise ValueError(t(self.guild_id, "dice_invalid_expr"))
 
         self.total = stack[0]
         return self.total
@@ -240,61 +242,66 @@ class DiceRoller:
 
     def get_simple_result(self) -> str:
         """Get simple result showing just the total."""
-        return f"🎲 ¡Sacaste **{self.total}**!"
+        return t(self.guild_id, "dice_result", total=self.total)
 
 
-def validate_dice_expression(expression: str) -> Tuple[bool, str]:
+def validate_dice_expression(expression: str, guild_id: int = 0) -> Tuple[bool, str]:
     """Validate a dice expression and return (is_valid, error_message)."""
     try:
-        roller = DiceRoller(expression)
+        roller = DiceRoller(expression, guild_id)
         roller._tokenize()
         return True, ""
     except ValueError as e:
         return False, str(e)
     except Exception:
-        return False, "Expresión inválida."
+        return False, t(guild_id, "dice_invalid_expr")
 
 
 class DiceRollView(discord.ui.View):
     """View for dice roll with reveal button for detailed breakdown."""
 
-    def __init__(self, roller: DiceRoller, original_user_id: int):
+    def __init__(self, roller: DiceRoller, original_user_id: int, guild_id: int = 0):
         super().__init__(timeout=300)  # 5 minute timeout
         self.roller = roller
         self.original_user_id = original_user_id
+        self.guild_id = guild_id
         self.revealed = False
+        for item in self.children:
+            if item.custom_id == "dice_reveal":
+                item.label = t(guild_id, "dice_view_breakdown")
 
-    @discord.ui.button(label="Ver desglose", style=discord.ButtonStyle.secondary, emoji="📋")
+    @discord.ui.button(label="View breakdown", custom_id="dice_reveal", style=discord.ButtonStyle.secondary, emoji="📋")
     async def reveal_breakdown(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.guild_id = interaction.guild.id if interaction.guild else 0
         # Only the original user can reveal
         if interaction.user.id != self.original_user_id:
             await interaction.response.send_message(
-                "Solo el jugador que hizo la tirada puede ver el desglose.",
+                t(self.guild_id, "dice_only_roller"),
                 ephemeral=True
             )
             return
 
         if self.revealed:
             await interaction.response.send_message(
-                "El desglose ya está visible.",
+                t(self.guild_id, "dice_already_visible"),
                 ephemeral=True
             )
             return
 
         self.revealed = True
         button.disabled = True
-        button.label = "Desglose visible"
+        button.label = t(self.guild_id, "dice_breakdown_visible")
 
         # Get detailed breakdown (without result, just dice details)
         breakdown = self.roller.get_breakdown()
 
         await interaction.response.edit_message(
             embed=discord.Embed(
-                title="🎲 Tirada de Dados",
-                description=f"🎲 ¡Sacaste **{self.roller.total}**!\n\n{breakdown}",
+                title=t(self.guild_id, "dice_roll_title"),
+                description=f"{t(self.guild_id, 'dice_result', total=self.roller.total)}\n\n{breakdown}",
                 color=discord.Color.blue()
             ).set_footer(
-                text=f"Solicitado por {interaction.user.display_name}",
+                text=t(self.guild_id, "search_requested_by", user=interaction.user.display_name),
                 icon_url=interaction.user.display_avatar
             ),
             view=self

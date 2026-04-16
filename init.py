@@ -1,15 +1,19 @@
 import discord
 import asyncio
 from discord.ext import commands
-
-#Imports the bot's configuration and custom functions
+from i18n import KirinTranslator
 from config import *
 from defs import *
+from database import *
 
 intents = discord.Intents.default()
 intents.message_content = True
 
 Bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
+
+@Bot.event
+async def setup_hook():
+    await Bot.tree.set_translator(KirinTranslator())
 
 @Bot.event
 async def on_ready():
@@ -45,6 +49,6 @@ async def load_extensions(ext_lst):
 
 # To call the function:
 asyncio.run(load_extensions(ext_lst))
-print("\n¡Finished loading extensions!\n")
+print("\nFinished loading extensions!\n")
 
 Bot.run(TOKEN)
